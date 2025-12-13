@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>CoinFlow</title>
+    
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/currency.js@2.0.4/dist/currency.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/11.8.0/math.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    },
+                    colors: {
+                        dark: {
+                            bg: '#000000',
+                            card: '#1c1c1e',
+                            btn: '#2c2c2e',
+                            text: '#ffffff',
+                            sub: '#8e8e93'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        :root { --sat: env(safe-area-inset-top); --sab: env(safe-area-inset-bottom); }
+        body { -webkit-tap-highlight-color: transparent; user-select: none; -webkit-touch-callout: none; touch-action: pan-y; }
+        input { font-size: 16px !important; }
+        button { touch-action: manipulation; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .tabular-nums { font-variant-numeric: tabular-nums; }
+        
+        .btn-press:active { transform: scale(0.92); transition: transform 0.1s; }
+        .key-press:active { filter: brightness(1.2); }
+        
+        .list-move, .list-enter-active, .list-leave-active { transition: all 0.3s ease; }
+        .list-enter-from, .list-leave-to { opacity: 0; transform: translateY(10px); }
+        .list-leave-active { position: absolute; width: 100%; }
+        
+        .modal-backdrop { backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
+    </style>
+</head>
+<body :class="{'dark': isDarkMode}" class="bg-gray-50 text-gray-900 h-[100dvh] w-screen overflow-hidden flex justify-center transition-colors duration-300">
+
+    <div id="app" class="w-full max-w-md h-full shadow-2xl flex flex-col relative overflow-hidden transition-colors duration-300 bg-white dark:bg-dark-bg dark:text-dark-text">
+        
+        <!-- Toast -->
+        <transition name="list">
+            <div v-if="showToast" class="absolute top-24 left-1/2 -translate-x-1/2 bg-gray-900/90 dark:bg-white/90 backdrop-blur text-white dark:text-gray-900 px-4 py-2 rounded-full text-sm shadow-xl z-50 flex items-center gap-2 pointer-events-none">
+                <i class="fa-solid fa-check text-emerald-400 dark:text-emerald-600"></i> {{ toastMessage }}
+            </div>
+        </transition>
+
+        <!-- 1. Header -->
+        <header class="flex justify-between items-center px-5 py-3 shrink-0 pt-[max(1rem,env(safe-area-inset-top))] z-20">
+            <button @click="isInfoOpen = true" class="w-10 h-10 rounded-full flex items-center justify-center text-gray-400 hover:text-emerald-500 dark:text-gray-500 transition btn-press">
+                <i class="fa-solid fa-circle-info text-xl"></i>
+            </button>
+            <div class="flex flex-col items-center opacity-80">
+                <h1 class="font-bold text-gray-800 dark:text-white tracking-widest text-sm select-none">COINFLOW</h1>
+            </div>
+            <button @click="isHistoryOpen = true" class="w-10 h-10 rounded-full flex items-center justify-center text-gray-400 hover:text-emerald-500 dark:text-gray-500 transition btn-press relative">
+                <i class="fa-solid fa-clock-rotate-left text-xl"></i>
+                <span v-if="history.length > 0" class="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-white dark:border-dark-bg"></span>
+            </button>
+        </header>
+
+        <!-- 2. 主輸入區 -->
+        <section class="px-4 pb-2 shrink-0 z-10">
+            <div @click="openModal('source')" class="bg-white dark:bg-dark-card rounded-[1.5rem] p-5 shadow-sm border border-gray-100 dark:border-gray-800 relative overflow-hidden transition-all duration-300 btn-press">
+                <button @click.stop="undo" v-if="canUndo" class="absolute top-4 right-4 text-gray-300 hover:text-emerald-500 dark:text-gray-600 dark:hover:text-emerald-400 transition p-2 z-20">
+                    <i class="fa-solid fa-rotate-left"></i>
+                </button>
+                <div class="flex items-center gap-3 mb-2">
+                    <span class="text-3xl shadow-sm rounded-full overflow-hidden">{{ getFlag(sourceCurrency) }}</span>
+                    <div class="flex flex-col">
+                        <span class="font-bold text-xl leading-none dark:text-white flex items-center gap-1">
+                            {{ sourceCurrency }}
+                            <i class="fa-solid fa-caret-down text-[10px] text-gray-300 dark:text-gray-600"></i>
+                        </span>
+                        <span class="text-[10px] text-gray-400 dark:text-gray-500 font-medium mt-0.5">{{ rates[sourceCurrency]?.name }}</span>
+                    </div>
+                </div>
+                <div class="text-right flex flex-col justify-end min-h-[80px]">
+                    <div class="text-emerald-600 dark:text-emerald-400 font-mono text-sm tracking-wide break-all opacity-80 mb-1 leading-tight min-h-[1.25em]">
+                        {{ fullExpressionDisplay }}
+                    </div>
+                    <div class="font-normal tracking-tight text-gray-900 dark:text-white tabular-nums leading-none break-all transition-all" :class="realTimeResultDisplay.length > 10 ? 'text-3xl' : 'text-4xl'">
+                        {{ realTimeResultDisplay }}
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 3. 清單區 -->
+        <section class="flex-grow overflow-y-auto px-4 py-2 space-y-2 relative mask-gradient">
+            <div class="flex items-center justify-between px-2 mb-1 opacity-50">
+                <span class="text-[10px] font-bold uppercase tracking-widest text-gray-400 dark:text-gray-600">Rates</span>
+                <button @click="openAddModal" class="text-xs text-emerald-600 dark:text-emerald-500 font-medium flex items-center gap-1 btn-press">
+                    <i class="fa-solid fa-circle-plus"></i> 新增
+                </button>
+            </div>
+            <transition-group name="list">
+                <div v-for="(code, index) in targetCurrencies" :key="code" class="group flex items-center justify-between p-3 rounded-xl hover:bg-white dark:hover:bg-dark-card border border-transparent hover:border-gray-100 dark:hover:border-gray-800 transition-all duration-200 cursor-pointer" @click="swapToSource(index)">
+                    <div class="flex items-center gap-3">
+                        <span class="text-xl rounded-full opacity-90 group-hover:opacity-100 transition-opacity">{{ getFlag(code) }}</span>
+                        <div class="flex flex-col">
+                            <div class="flex items-baseline gap-2">
+                                <span class="font-bold text-gray-700 dark:text-gray-200 text-sm">{{ code }}</span>
+                                <span class="text-[10px] text-gray-400 dark:text-gray-600">1 {{ sourceCurrency }} = {{ (getRate(code)/getRate(sourceCurrency)).toFixed(3) }}</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <div class="text-right">
+                            <div class="text-lg font-medium text-gray-800 dark:text-gray-100 tabular-nums tracking-tight">{{ calculateTargetValue(code) }}</div>
+                        </div>
+                        <button @click.stop="removeTarget(index)" class="w-6 h-6 rounded-full text-gray-300 dark:text-gray-700 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center justify-center transition opacity-0 group-hover:opacity-100">
+                            <i class="fa-solid fa-minus text-[10px]"></i>
+                        </button>
+                    </div>
+                </div>
+            </transition-group>
+            <div class="h-4"></div>
+        </section>
+
+        <!-- 4. 鍵盤區 -->
+        <section class="grid grid-cols-4 gap-[1px] bg-gray-200 dark:bg-black shrink-0 p-[1px] pb-[env(safe-area-inset-bottom)] select-none z-30 shadow-[0_-4px_10px_rgba(0,0,0,0.03)]">
+            <button @click="handleAC" class="bg-gray-100 dark:bg-dark-btn text-red-500 font-medium text-lg h-[64px] key-press transition-all duration-200">{{ isAC ? 'AC' : 'C' }}</button>
+            <button @click="backspace" class="bg-gray-100 dark:bg-dark-btn text-gray-600 dark:text-gray-300 font-medium text-xl key-press"><i class="fa-solid fa-delete-left"></i></button>
+            <button @click="applyPercentage" class="bg-gray-100 dark:bg-dark-btn text-emerald-600 dark:text-emerald-400 font-medium text-lg key-press">%</button>
+            <button @click="appendOperator('/')" class="bg-emerald-500 dark:bg-emerald-600 text-white text-xl key-press">÷</button>
+
+            <button @click="appendNumber('7')" class="bg-white dark:bg-dark-card text-gray-800 dark:text-white text-2xl font-light h-[64px] key-press">7</button>
+            <button @click="appendNumber('8')" class="bg-white dark:bg-dark-card text-gray-800 dark:text-white text-2xl font-light key-press">8</button>
+            <button @click="appendNumber('9')" class="bg-white dark:bg-dark-card text-gray-800 dark:text-white text-2xl font-light key-press">9</button>
+            <button @click="appendOperator('*')" class="bg-emerald-500 dark:bg-emerald-600 text-white text-xl key-press">×</button>
+
+            <button @click="appendNumber('4')" class="bg-white dark:bg-dark-card text-gray-800 dark:text-white text-2xl font-light h-[64px] key-press">4</button>
+            <button @click="appendNumber('5')" class="bg-white dark:bg-dark-card text-gray-800 dark:text-white text-2xl font-light key-press">5</button>
+            <button @click="appendNumber('6')" class="bg-white dark:bg-dark-card text-gray-800 dark:text-white text-2xl font-light key-press">6</button>
+            <button @click="appendOperator('-')" class="bg-emerald-500 dark:bg-emerald-600 text-white text-xl key-press">-</button>
+
+            <button @click="appendNumber('1')" class="bg-white dark:bg-dark-card text-gray-800 dark:text-white text-2xl font-light h-[64px] key-press">1</button>
+            <button @click="appendNumber('2')" class="bg-white dark:bg-dark-card text-gray-800 dark:text-white text-2xl font-light key-press">2</button>
+            <button @click="appendNumber('3')" class="bg-white dark:bg-dark-card text-gray-800 dark:text-white text-2xl font-light key-press">3</button>
+            <button @click="appendOperator('+')" class="bg-emerald-500 dark:bg-emerald-600 text-white text-xl key-press">+</button>
+
+            <button @click="appendNumber('0')" class="bg-white dark:bg-dark-card text-gray-800 dark:text-white text-2xl font-light h-[64px] key-press">0</button>
+            <button @click="appendNumber('00')" class="bg-white dark:bg-dark-card text-gray-800 dark:text-white text-xl font-light key-press tracking-tight">00</button>
+            <button @click="appendNumber('.')" class="bg-white dark:bg-dark-card text-gray-800 dark:text-white text-2xl font-light key-press">.</button>
+            <button @click="calculateFinal" class="bg-emerald-600 dark:bg-emerald-500 text-white text-xl key-press">=</button>
+        </section>
+
+        <!-- 彈窗組件 -->
+        <transition enter-active-class="transition duration-300 ease-out" enter-from-class="opacity-0 scale-95" enter-to-class="opacity-100 scale-100" leave-active-class="transition duration-200 ease-in" leave-from-class="opacity-100 scale-100" leave-to-class="opacity-0 scale-95">
+            <div v-if="isInfoOpen" class="absolute inset-0 z-50 flex items-center justify-center p-6 modal-backdrop bg-black/20 dark:bg-black/50" @click.self="isInfoOpen = false">
+                <div class="bg-white dark:bg-dark-card w-full max-w-sm rounded-3xl p-6 shadow-2xl transform transition-all border border-gray-100 dark:border-gray-800">
+                    <div class="flex justify-between items-center mb-6">
+                        <h2 class="text-xl font-bold text-gray-800 dark:text-white">關於 CoinFlow</h2>
+                        <button @click="isInfoOpen = false" class="w-8 h-8 rounded-full bg-gray-100 dark:bg-dark-btn flex items-center justify-center text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 transition"><i class="fa-solid fa-xmark"></i></button>
+                    </div>
+                    <div class="space-y-6">
+                        <div class="bg-emerald-50 dark:bg-emerald-900/20 p-4 rounded-2xl flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-full bg-emerald-100 dark:bg-emerald-800 flex items-center justify-center text-emerald-600 dark:text-emerald-400 shrink-0"><i class="fa-solid fa-rotate"></i></div>
+                            <div><div class="text-xs text-emerald-600/70 dark:text-emerald-400/70 font-medium uppercase tracking-wide">Last Updated</div><div class="font-bold text-emerald-800 dark:text-emerald-300 text-lg">{{ lastUpdated }}</div></div>
+                        </div>
+                        <div class="flex items-center justify-between p-2">
+                            <span class="text-gray-600 dark:text-gray-300 font-medium">深色模式</span>
+                            <button @click="toggleTheme" class="relative inline-flex h-8 w-14 items-center rounded-full transition-colors duration-300 focus:outline-none" :class="isDarkMode ? 'bg-emerald-500' : 'bg-gray-200'">
+                                <span class="inline-block h-6 w-6 transform rounded-full bg-white shadow transition-transform duration-300" :class="isDarkMode ? 'translate-x-7' : 'translate-x-1'">
+                                    <i v-if="isDarkMode" class="fa-solid fa-moon text-emerald-500 text-xs absolute top-1.5 left-1.5"></i>
+                                    <i v-else class="fa-solid fa-sun text-yellow-500 text-xs absolute top-1.5 left-1.5"></i>
+                                </span>
+                            </button>
+                        </div>
+                        <div class="text-xs text-gray-400 dark:text-dark-sub leading-relaxed border-t border-gray-100 dark:border-gray-800 pt-4">
+                            <p class="mb-2"><strong class="text-gray-500 dark:text-gray-400">免責聲明：</strong></p><p>本應用程式提供之匯率資料僅供參考。實際交易匯率請以您的銀行、信用卡發卡機構或交易櫃檯當下公告之買賣匯率為準。</p>
+                        </div>
+                        <div class="text-center text-[10px] text-gray-300 dark:text-gray-700 font-mono">v4.6.0</div>
+                    </div>
+                </div>
+            </div>
+        </transition>
+
+        <transition enter-active-class="transition duration-300 ease-out" enter-from-class="translate-y-full" enter-to-class="translate-y-0" leave-active-class="transition duration-200 ease-in" leave-from-class="translate-y-0" leave-to-class="translate-y-full">
+            <div v-if="isModalOpen" class="absolute inset-0 bg-white dark:bg-dark-bg z-50 flex flex-col pt-[env(safe-area-inset-top)]">
+                <div class="px-4 py-4 border-b border-gray-100 dark:border-gray-800 flex items-center gap-3 shrink-0">
+                    <button @click="isModalOpen = false" class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500 transition"><i class="fa-solid fa-xmark text-lg"></i></button>
+                    <input ref="searchInput" v-model="searchQuery" type="text" placeholder="搜尋貨幣..." class="w-full bg-gray-100 dark:bg-dark-card dark:text-white rounded-xl px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                </div>
+                <div class="flex-grow overflow-y-auto pb-20 p-2">
+                    <button v-for="curr in filteredCurrencies" :key="curr.code" @click="selectCurrency(curr.code)" class="w-full px-4 py-3 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-dark-card rounded-xl transition">
+                        <div class="flex items-center gap-4">
+                            <span class="text-3xl">{{ curr.flag }}</span>
+                            <span class="font-bold text-gray-800 dark:text-white text-lg">{{ curr.code }} - {{ curr.name }}</span>
+                        </div>
+                    </button>
+                </div>
+            </div>
+        </transition>
+
+        <transition enter-active-class="transition duration-300 ease-out" enter-from-class="translate-y-full" enter-to-class="translate-y-0" leave-active-class="transition duration-200 ease-in" leave-from-class="translate-y-0" leave-to-class="translate-y-full">
+            <div v-if="isHistoryOpen" class="absolute inset-0 bg-gray-50 dark:bg-dark-bg z-50 flex flex-col pt-[env(safe-area-inset-top)]">
+                <div class="px-6 py-4 bg-white dark:bg-dark-card border-b border-gray-100 dark:border-gray-800 flex items-center justify-between shrink-0 shadow-sm">
+                    <button @click="isHistoryOpen = false"><i class="fa-solid fa-chevron-down text-lg text-gray-500"></i></button>
+                    <h2 class="font-bold text-lg text-gray-800 dark:text-white">歷史紀錄</h2>
+                    <button @click="handleClearHistory" class="text-red-500 text-sm font-medium">{{ confirmDelete ? '確認' : '清除' }}</button>
+                </div>
+                <div class="flex-grow overflow-y-auto p-4 space-y-3">
+                    <div v-if="history.length === 0" class="flex flex-col items-center justify-center h-64 text-gray-400 gap-2"><p class="text-sm">無紀錄</p></div>
+                    <div v-for="(item, index) in history" :key="index" @click="useHistoryItem(item.result)" class="bg-white dark:bg-dark-card p-4 rounded-2xl shadow-sm cursor-pointer border border-transparent dark:border-gray-800">
+                        <div class="text-gray-500 dark:text-gray-400 text-right text-sm font-mono">{{ item.formula }}</div>
+                        <div class="text-emerald-600 dark:text-emerald-400 text-right text-2xl font-bold font-mono mt-1">= {{ item.resultFormatted }}</div>
+                    </div>
+                </div>
+            </div>
+        </transition>
+
+    </div>
+
+    <script>
+        const { createApp, ref, computed, onMounted, watch, nextTick } = Vue;
+
+        createApp({
+            setup() {
+                // Constants
+                const STORAGE_KEY = 'coinflow_prefs_v1';
+                
+                // Metadata Dictionary
+                const currencyMeta = {
+                    "TWD": { name: "新台幣", flag: "🇹🇼", symbol: "$" },
+                    "USD": { name: "美元", flag: "🇺🇸", symbol: "$" },
+                    "JPY": { name: "日圓", flag: "🇯🇵", symbol: "¥" },
+                    "KRW": { name: "韓元", flag: "🇰🇷", symbol: "₩" },
+                    "CNY": { name: "人民幣", flag: "🇨🇳", symbol: "¥" },
+                    "HKD": { name: "港幣", flag: "🇭🇰", symbol: "$" },
+                    "THB": { name: "泰銖", flag: "🇹🇭", symbol: "฿" },
+                    "SGD": { name: "新幣", flag: "🇸🇬", symbol: "$" },
+                    "VND": { name: "越南盾", flag: "🇻🇳", symbol: "₫" },
+                    "MYR": { name: "馬來幣", flag: "🇲🇾", symbol: "RM" },
+                    "PHP": { name: "菲律賓披索", flag: "🇵🇭", symbol: "₱" },
+                    "IDR": { name: "印尼盾", flag: "🇮🇩", symbol: "Rp" },
+                    "EUR": { name: "歐元", flag: "🇪🇺", symbol: "€" },
+                    "GBP": { name: "英鎊", flag: "🇬🇧", symbol: "£" },
+                    "CHF": { name: "瑞士法郎", flag: "🇨🇭", symbol: "Fr" },
+                    "SEK": { name: "瑞典克朗", flag: "🇸🇪", symbol: "kr" },
+                    "CAD": { name: "加幣", flag: "🇨🇦", symbol: "$" },
+                    "AUD": { name: "澳幣", flag: "🇦🇺", symbol: "$" },
+                    "NZD": { name: "紐幣", flag: "🇳🇿", symbol: "$" },
+                    "MXN": { name: "墨西哥披索", flag: "🇲🇽", symbol: "$" },
+                    "BRL": { name: "巴西雷亞爾", flag: "🇧🇷", symbol: "R$" },
+                    "INR": { name: "印度盧比", flag: "🇮🇳", symbol: "₹" },
+                    "RUB": { name: "俄羅斯盧布", flag: "🇷🇺", symbol: "₽" },
+                    "TRY": { name: "土耳其里拉", flag: "🇹🇷", symbol: "₺" },
+                    "ZAR": { name: "南非蘭特", flag: "🇿🇦", symbol: "R" }
+                };
+
+                // State
+                const rates = ref({});
+                const lastUpdated = ref('Updating...');
+                const isLoading = ref(true);
+                const showToast = ref(false);
+                const toastMessage = ref('');
+                const isDarkMode = ref(false);
+                
+                const sourceCurrency = ref('TWD');
+                const targetCurrencies = ref(['JPY', 'USD', 'KRW']);
+                
+                const inputDisplay = ref('');
+                const expressionAccumulator = ref('');
+                const shouldResetScreen = ref(false);
+                const undoStack = ref([]);
+                
+                const isModalOpen = ref(false);
+                const isInfoOpen = ref(false);
+                const isHistoryOpen = ref(false);
+                const modalMode = ref('source');
+                const searchQuery = ref('');
+                const searchInput = ref(null);
+                const history = ref([]);
+                const confirmDelete = ref(false);
+
+                // --- Methods ---
+
+                // 1. Fetch & Merge Logic
+                const fetchRates = async () => {
+                    isLoading.value = true;
+                    try {
+                        const res = await fetch('./rates.json');
+                        if(!res.ok) throw new Error("Failed to fetch");
+                        
+                        const data = await res.json();
+                        
+                        const newRates = {};
+                        
+                        if (data.base) {
+                            const baseMeta = currencyMeta[data.base] || { name: data.base, flag: '🌐', symbol: '$' };
+                            newRates[data.base] = { rate: 1, ...baseMeta };
+                        }
+
+                        for (const [code, rate] of Object.entries(data.rates)) {
+                            const meta = currencyMeta[code] || { name: code, flag: '🌐', symbol: '$' };
+                            newRates[code] = { rate, ...meta };
+                        }
+                        
+                        rates.value = newRates;
+                        lastUpdated.value = data.date || new Date().toLocaleDateString();
+
+                    } catch (e) {
+                        console.warn("Fetch failed, using mock data for demo", e);
+                        const mock = {};
+                        Object.keys(currencyMeta).forEach(k => {
+                            mock[k] = { rate: Math.random() * 100, ...currencyMeta[k] };
+                        });
+                        if(mock['TWD']) mock['TWD'].rate = 32.5;
+                        if(mock['USD']) mock['USD'].rate = 1;
+                        if(mock['JPY']) mock['JPY'].rate = 150;
+                        rates.value = mock;
+                        lastUpdated.value = "Demo Mode";
+                    } finally {
+                        isLoading.value = false;
+                        loadPrefs();
+                    }
+                };
+
+                // Preferences
+                const savePrefs = () => {
+                    const prefs = {
+                        source: sourceCurrency.value,
+                        targets: targetCurrencies.value,
+                        darkMode: isDarkMode.value,
+                        history: history.value
+                    };
+                    localStorage.setItem(STORAGE_KEY, JSON.stringify(prefs));
+                };
+
+                const loadPrefs = () => {
+                    const saved = localStorage.getItem(STORAGE_KEY);
+                    if (!saved) return;
+                    try {
+                        const prefs = JSON.parse(saved);
+                        if (prefs.source && rates.value[prefs.source]) sourceCurrency.value = prefs.source;
+                        if (Array.isArray(prefs.targets)) {
+                            const valid = prefs.targets.filter(c => rates.value[c]);
+                            if (valid.length > 0) targetCurrencies.value = valid;
+                        }
+                        if (typeof prefs.darkMode === 'boolean') {
+                            isDarkMode.value = prefs.darkMode;
+                            updateThemeClass();
+                        }
+                        if (Array.isArray(prefs.history)) history.value = prefs.history;
+                    } catch (e) { console.error("Prefs load error", e); }
+                };
+
+                // Watchers
+                watch([sourceCurrency, targetCurrencies, isDarkMode, history], savePrefs, { deep: true });
+
+                // UI Helpers
+                const toggleTheme = () => { isDarkMode.value = !isDarkMode.value; updateThemeClass(); };
+                const updateThemeClass = () => { if(isDarkMode.value) document.documentElement.classList.add('dark'); else document.documentElement.classList.remove('dark'); };
+                const getFlag = (code) => rates.value[code]?.flag || '🌐';
+                const getRate = (code) => rates.value[code]?.rate || 1;
+                const canUndo = computed(() => undoStack.value.length > 0);
+                const currencyList = computed(() => Object.keys(rates.value).sort());
+                
+                const filteredCurrencies = computed(() => {
+                    const q = searchQuery.value.toLowerCase();
+                    if (!q) return currencyList.value.map(code => ({ code, ...rates.value[code] }));
+                    return currencyList.value
+                        .filter(code => {
+                            const meta = rates.value[code];
+                            return code.toLowerCase().includes(q) || meta.name.includes(q);
+                        })
+                        .map(code => ({ code, ...rates.value[code] }));
+                });
+
+                // Calculation Logic
+                const saveState = () => { if(undoStack.value.length > 20) undoStack.value.shift(); undoStack.value.push({ inputDisplay: inputDisplay.value, expressionAccumulator: expressionAccumulator.value, shouldResetScreen: shouldResetScreen.value }); };
+                const undo = () => { if(undoStack.value.length === 0) return; const s = undoStack.value.pop(); inputDisplay.value = s.inputDisplay; expressionAccumulator.value = s.expressionAccumulator; shouldResetScreen.value = s.shouldResetScreen; };
+                const fullExpressionDisplay = computed(() => expressionAccumulator.value + (inputDisplay.value && !shouldResetScreen.value ? inputDisplay.value : ''));
+                
+                const realTimeResultDisplay = computed(() => {
+                    if (!expressionAccumulator.value && !inputDisplay.value) return '0';
+                    let expr = expressionAccumulator.value + (inputDisplay.value || '');
+                    const cleanExpr = expr.replace(/[+\-*/%×÷\s]+$/, '').replace(/×/g, '*').replace(/÷/g, '/');
+                    try { return cleanExpr ? parseFloat(math.evaluate(cleanExpr).toFixed(6)).toString() : (inputDisplay.value || '0'); } catch(e){ return inputDisplay.value || '0'; }
+                });
+
+                const calculateTargetValue = (targetCode) => {
+                    const amount = parseFloat(realTimeResultDisplay.value) || 0;
+                    if (amount === 0) return '0';
+                    const res = (amount / getRate(sourceCurrency.value)) * getRate(targetCode);
+                    return currency(res, { symbol: '', precision: 2 }).format();
+                };
+
+                // Keypad Actions
+                const handleAC = () => { saveState(); if (!inputDisplay.value || inputDisplay.value === '0') { expressionAccumulator.value = ''; shouldResetScreen.value = false; } inputDisplay.value = ''; };
+                const isAC = computed(() => !inputDisplay.value || inputDisplay.value === '0');
+                const backspace = () => { saveState(); if(!shouldResetScreen.value && inputDisplay.value.length > 0) inputDisplay.value = inputDisplay.value.slice(0, -1); };
+                const appendNumber = (n) => { saveState(); if(shouldResetScreen.value){ inputDisplay.value=''; shouldResetScreen.value=false; if(!expressionAccumulator.value.endsWith(' ')) expressionAccumulator.value=''; } if(n==='.'&&inputDisplay.value.includes('.'))return; if(inputDisplay.value==='0'&&n!=='.'){ if(n!=='0'&&n!=='00') inputDisplay.value=n; } else if(inputDisplay.value.length<12) inputDisplay.value+=n; };
+                const getOp = (op) => op==='*'?'×':op==='/'?'÷':op;
+                const appendOperator = (op) => { saveState(); const s = getOp(op); if(!inputDisplay.value && expressionAccumulator.value) { expressionAccumulator.value = expressionAccumulator.value.trimEnd().slice(0, -1).trimEnd() + ` ${s} `; return; } expressionAccumulator.value += `${inputDisplay.value} ${s} `; inputDisplay.value = ''; shouldResetScreen.value = false; };
+                const applyPercentage = () => { saveState(); const v = parseFloat(inputDisplay.value); if(isNaN(v)) return; const expr = expressionAccumulator.value.trim(); let nv = 0; if(expr.endsWith('+')||expr.endsWith('-')) { const lastOp = Math.max(expr.lastIndexOf('+'), expr.lastIndexOf('-')); try { const prev = math.evaluate(expr.substring(0, lastOp).replace(/×/g,'*').replace(/÷/g,'/')); nv = prev * (v/100); } catch(e){} } else { nv = v/100; } inputDisplay.value = parseFloat(nv.toFixed(6)).toString(); };
+                const calculateFinal = () => { saveState(); const expr = expressionAccumulator.value + inputDisplay.value; try { const res = math.evaluate(expr.replace(/×/g,'*').replace(/÷/g,'/')); addToHistory(expr, res); expressionAccumulator.value=''; inputDisplay.value=parseFloat(res.toFixed(6)).toString(); shouldResetScreen.value=true; } catch(e){} };
+                const clear = () => { saveState(); inputDisplay.value=''; expressionAccumulator.value=''; shouldResetScreen.value=false; };
+
+                // Modals
+                const openModal = (m) => { modalMode.value = m; searchQuery.value = ''; isModalOpen.value = true; nextTick(() => searchInput.value?.focus()); };
+                const openAddModal = () => openModal('add');
+                const selectCurrency = (c) => { 
+                    if(modalMode.value === 'source') { if(targetCurrencies.value.includes(c)) targetCurrencies.value[targetCurrencies.value.indexOf(c)] = sourceCurrency.value; sourceCurrency.value = c; inputDisplay.value=''; expressionAccumulator.value=''; }
+                    else if(c !== sourceCurrency.value && !targetCurrencies.value.includes(c)) targetCurrencies.value.push(c);
+                    isModalOpen.value = false; 
+                };
+                const removeTarget = (i) => targetCurrencies.value.splice(i, 1);
+                const swapToSource = (i) => { saveState(); const newSrc = targetCurrencies.value[i]; const newVal = calculateTargetValue(newSrc).replace(/,/g,''); targetCurrencies.value[i] = sourceCurrency.value; sourceCurrency.value = newSrc; inputDisplay.value = newVal; expressionAccumulator.value=''; shouldResetScreen.value=true; };
+
+                // History
+                const addToHistory = (f, r) => { history.value.unshift({ time: new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}), formula: f, result: r, resultFormatted: currency(r, {symbol:'', precision:2}).format() }); if(history.value.length>50) history.value.pop(); };
+                const handleClearHistory = () => { if(confirmDelete.value){ history.value=[]; confirmDelete.value=false; } else { confirmDelete.value=true; setTimeout(()=>confirmDelete.value=false, 3000); }};
+                const useHistoryItem = (r) => { saveState(); inputDisplay.value=String(r); isHistoryOpen.value=false; shouldResetScreen.value=true; expressionAccumulator.value=''; };
+
+                onMounted(() => { fetchRates(); });
+
+                return {
+                    rates, lastUpdated, isLoading, showToast, toastMessage, isDarkMode, toggleTheme,
+                    sourceCurrency, targetCurrencies, inputDisplay, expressionAccumulator, fullExpressionDisplay, realTimeResultDisplay,
+                    isModalOpen, isInfoOpen, isHistoryOpen, searchQuery, filteredCurrencies, searchInput,
+                    history, confirmDelete, undo, canUndo, isAC,
+                    openModal, openAddModal, selectCurrency, swapToSource, removeTarget, calculateTargetValue, getFlag, getRate,
+                    appendNumber, appendOperator, calculateFinal, clear, backspace, applyPercentage, handleAC, handleClearHistory, useHistoryItem
+                };
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>
