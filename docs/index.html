@@ -7,31 +7,18 @@
       window.dataLayer = window.dataLayer || [];
       function gtag(){dataLayer.push(arguments);}
       gtag('js', new Date());
-
       gtag('config', 'G-KQZ8K34TCP');
     </script>
-    <!-- End Google Analytics -->
 
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     
-    <!-- === SEO 與 社群分享優化 === -->
     <title>CoinFlow - 極簡匯率計算機</title>
-    <meta name="description" content="專為旅行者與代購設計的匯率計算機。支援多國貨幣即時換算、算式累加與歷史紀錄，出國旅遊記帳必備工具。">
-    <meta name="keywords" content="匯率, 計算機, 換匯, 記帳, 旅遊, 台灣匯率, 日本匯率">
-    <meta name="author" content="CoinFlow">
-
-    <!-- Open Graph / LINE / Facebook 預覽設定 -->
+    <meta name="description" content="專為旅行者與代購設計的匯率計算機。支援多國貨幣即時換算、算式累加與歷史紀錄。">
     <meta property="og:type" content="website">
-    <meta property="og:title" content="CoinFlow - 您的隨身匯率計算機">
-    <meta property="og:description" content="旅行、代購的好幫手！支援算式輸入、即時多國匯率轉換，操作手感極佳的網頁 App。">
-    <meta property="og:image" content="https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Travel%20and%20places/Money%20with%20Wings.png">
-    
-    <!-- Twitter Card -->
-    <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" content="CoinFlow - 極簡匯率計算機">
-    <meta name="twitter:description" content="旅行、代購的好幫手！支援算式輸入、即時多國匯率轉換。">
-    <!-- ==================================== -->
+    <meta property="og:title" content="CoinFlow">
+    <meta property="og:description" content="旅行、代購的好幫手！支援算式輸入、即時多國匯率轉換。">
+    <meta property="og:image" content="https://calebtestbeta.github.io/coinflow/preview.png">
 
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
@@ -72,12 +59,14 @@
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .tabular-nums { font-variant-numeric: tabular-nums; }
         
-        .btn-press:active { transform: scale(0.92); transition: transform 0.1s; }
-        .key-press:active { filter: brightness(1.2); }
+        /* 互動效果 Class 命名優化 */
+        .effect-press:active { transform: scale(0.92); transition: transform 0.1s; }
+        .effect-key-active:active { filter: brightness(1.2); }
         
-        .list-move, .list-enter-active, .list-leave-active { transition: all 0.3s ease; }
-        .list-enter-from, .list-leave-to { opacity: 0; transform: translateY(10px); }
-        .list-leave-active { position: absolute; width: 100%; }
+        /* 動畫 Class */
+        .anim-list-move, .anim-list-enter-active, .anim-list-leave-active { transition: all 0.3s ease; }
+        .anim-list-enter-from, .anim-list-leave-to { opacity: 0; transform: translateY(10px); }
+        .anim-list-leave-active { position: absolute; width: 100%; }
         
         .modal-backdrop { backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
     </style>
@@ -86,43 +75,45 @@
 
     <div id="app" class="w-full max-w-md h-full shadow-2xl flex flex-col relative overflow-hidden transition-colors duration-300 bg-white dark:bg-dark-bg dark:text-dark-text">
         
-        <!-- Toast -->
-        <transition name="list">
-            <div v-if="showToast" class="absolute top-24 left-1/2 -translate-x-1/2 bg-gray-900/90 dark:bg-white/90 backdrop-blur text-white dark:text-gray-900 px-4 py-2 rounded-full text-sm shadow-xl z-50 flex items-center gap-2 pointer-events-none">
+        <!-- UI: Toast Notification -->
+        <transition name="anim-list">
+            <div v-if="showToast" id="toast-notification" class="absolute top-24 left-1/2 -translate-x-1/2 bg-gray-900/90 dark:bg-white/90 backdrop-blur text-white dark:text-gray-900 px-4 py-2 rounded-full text-sm shadow-xl z-50 flex items-center gap-2 pointer-events-none">
                 <i class="fa-solid fa-check text-emerald-400 dark:text-emerald-600"></i> {{ toastMessage }}
             </div>
         </transition>
 
-        <!-- 1. Header -->
-        <header class="flex justify-between items-center px-5 py-3 shrink-0 pt-[max(1rem,env(safe-area-inset-top))] z-20">
-            <!-- 資訊按鈕 -->
+        <!-- SECTION: Header -->
+        <header id="app-header" class="flex justify-between items-center px-5 py-3 shrink-0 pt-[max(1rem,env(safe-area-inset-top))] z-20">
             <button 
+                id="btn-info"
                 @click="isInfoOpen = true" 
-                class="w-10 h-10 rounded-full flex items-center justify-center text-gray-400 hover:text-emerald-500 dark:text-gray-500 transition btn-press"
+                class="w-10 h-10 rounded-full flex items-center justify-center text-gray-400 hover:text-emerald-500 dark:text-gray-500 transition effect-press"
             >
                 <i class="fa-solid fa-circle-info text-xl"></i>
             </button>
 
-            <!-- Logo -->
             <div class="flex flex-col items-center opacity-80">
                 <h1 class="font-bold text-gray-800 dark:text-white tracking-widest text-sm select-none">COINFLOW</h1>
             </div>
             
-            <!-- 歷史紀錄 -->
-            <button @click="isHistoryOpen = true" class="w-10 h-10 rounded-full flex items-center justify-center text-gray-400 hover:text-emerald-500 dark:text-gray-500 transition btn-press relative">
+            <button 
+                id="btn-history"
+                @click="isHistoryOpen = true" 
+                class="w-10 h-10 rounded-full flex items-center justify-center text-gray-400 hover:text-emerald-500 dark:text-gray-500 transition effect-press relative"
+            >
                 <i class="fa-solid fa-clock-rotate-left text-xl"></i>
                 <span v-if="history.length > 0" class="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-white dark:border-dark-bg"></span>
             </button>
         </header>
 
-        <!-- 2. 主輸入區 -->
-        <section class="px-4 pb-2 shrink-0 z-10">
+        <!-- SECTION: Master Display (Source Currency) -->
+        <section id="source-display-area" class="px-4 pb-2 shrink-0 z-10">
             <div 
                 @click="openModal('source')"
-                class="bg-white dark:bg-dark-card rounded-[1.5rem] p-5 shadow-sm border border-gray-100 dark:border-gray-800 relative overflow-hidden transition-all duration-300 btn-press"
+                class="bg-white dark:bg-dark-card rounded-[1.5rem] p-4 shadow-sm border border-gray-100 dark:border-gray-800 relative overflow-hidden transition-all duration-300 effect-press cursor-pointer"
             >
-                <!-- Undo 按鈕 -->
                 <button 
+                    id="btn-undo"
                     @click.stop="undo" 
                     v-if="canUndo"
                     class="absolute top-4 right-4 text-gray-300 hover:text-emerald-500 dark:text-gray-600 dark:hover:text-emerald-400 transition p-2 z-20"
@@ -130,7 +121,7 @@
                     <i class="fa-solid fa-rotate-left"></i>
                 </button>
 
-                <!-- 頂部：國旗與名稱 -->
+                <!-- Source Info -->
                 <div class="flex items-center gap-3 mb-2">
                     <span class="text-3xl shadow-sm rounded-full overflow-hidden">{{ getFlag(sourceCurrency) }}</span>
                     <div class="flex flex-col">
@@ -142,28 +133,37 @@
                     </div>
                 </div>
 
-                <!-- 顯示區 -->
-                <div class="text-right flex flex-col justify-end min-h-[80px]">
-                    <div class="text-emerald-600 dark:text-emerald-400 font-mono text-sm tracking-wide break-all opacity-80 mb-1 leading-tight min-h-[1.25em]">
+                <!-- Calculation Display -->
+                <div class="text-right flex flex-col justify-end min-h-[70px]">
+                    <div id="formula-display" class="text-emerald-600 dark:text-emerald-400 font-mono text-sm tracking-wide break-all opacity-80 mb-1 leading-tight min-h-[1.25em]">
                         {{ fullExpressionDisplay }}
                     </div>
-                    <div class="font-normal tracking-tight text-gray-900 dark:text-white tabular-nums leading-none break-all transition-all" :class="realTimeResultDisplay.length > 10 ? 'text-3xl' : 'text-4xl'">
+                    <div id="result-display" class="font-normal tracking-tight text-gray-900 dark:text-white tabular-nums leading-none break-all transition-all" :class="realTimeResultDisplay.length > 9 ? 'text-4xl' : 'text-5xl'">
                         {{ realTimeResultDisplay }}
                     </div>
                 </div>
             </div>
         </section>
 
-        <!-- 3. 清單區 -->
-        <section class="flex-grow overflow-y-auto px-4 py-2 space-y-2 relative mask-gradient">
-            <div class="flex items-center justify-between px-2 mb-1 opacity-50">
+        <!-- SECTION: Target List (Currency Rates) -->
+        <section id="target-list-area" class="flex-grow overflow-y-auto px-4 py-2 space-y-2 relative">
+            <!-- Scroll Hints -->
+            <div class="pointer-events-none absolute inset-x-0 top-0 h-6 bg-gradient-to-b from-gray-50 to-transparent z-10 dark:from-dark-bg"></div>
+            
+            <div class="flex items-center justify-between px-2 mb-1 opacity-50 relative z-0">
                 <span class="text-[10px] font-bold uppercase tracking-widest text-gray-400 dark:text-gray-600">Rates</span>
-                <button @click="openAddModal" class="text-xs text-emerald-600 dark:text-emerald-500 font-medium flex items-center gap-1 btn-press">
+                <button id="btn-add-currency" @click="openAddModal" class="text-xs text-emerald-600 dark:text-emerald-500 font-medium flex items-center gap-1 effect-press">
                     <i class="fa-solid fa-circle-plus"></i> 新增
                 </button>
             </div>
-            <transition-group name="list">
-                <div v-for="(code, index) in targetCurrencies" :key="code" class="group flex items-center justify-between p-3 rounded-xl hover:bg-white dark:hover:bg-dark-card border border-transparent hover:border-gray-100 dark:hover:border-gray-800 transition-all duration-200 cursor-pointer" @click="swapToSource(index)">
+
+            <transition-group name="anim-list">
+                <div 
+                    v-for="(code, index) in targetCurrencies" 
+                    :key="code" 
+                    class="sem-currency-row group flex items-center justify-between p-3 rounded-xl hover:bg-white dark:hover:bg-dark-card border border-transparent hover:border-gray-100 dark:hover:border-gray-800 transition-all duration-200 cursor-pointer relative z-0" 
+                    @click="swapToSource(index)"
+                >
                     <div class="flex items-center gap-3">
                         <span class="text-xl rounded-full opacity-90 group-hover:opacity-100 transition-opacity">{{ getFlag(code) }}</span>
                         <div class="flex flex-col">
@@ -177,46 +177,53 @@
                         <div class="text-right">
                             <div class="text-lg font-medium text-gray-800 dark:text-gray-100 tabular-nums tracking-tight">{{ calculateTargetValue(code) }}</div>
                         </div>
-                        <button @click.stop="removeTarget(index)" class="w-6 h-6 rounded-full text-gray-300 dark:text-gray-700 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center justify-center transition opacity-0 group-hover:opacity-100">
+                        <button @click.stop="removeTarget(index)" class="sem-btn-delete w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-500 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center justify-center transition">
                             <i class="fa-solid fa-minus text-[10px]"></i>
                         </button>
                     </div>
                 </div>
             </transition-group>
+            
+            <div class="pointer-events-none absolute inset-x-0 bottom-0 h-6 bg-gradient-to-t from-gray-50 to-transparent z-10 dark:from-dark-bg"></div>
             <div class="h-4"></div>
         </section>
 
-        <!-- 4. 鍵盤區 -->
-        <section class="grid grid-cols-4 gap-[1px] bg-gray-200 dark:bg-black shrink-0 p-[1px] pb-[env(safe-area-inset-bottom)] select-none z-30 shadow-[0_-4px_10px_rgba(0,0,0,0.03)]">
-            <button @click="handleAC" class="bg-gray-100 dark:bg-dark-btn text-red-500 font-medium text-lg h-[64px] key-press transition-all duration-200">{{ isAC ? 'AC' : 'C' }}</button>
-            <button @click="backspace" class="bg-gray-100 dark:bg-dark-btn text-gray-600 dark:text-gray-300 font-medium text-xl key-press"><i class="fa-solid fa-delete-left"></i></button>
-            <button @click="applyPercentage" class="bg-gray-100 dark:bg-dark-btn text-emerald-600 dark:text-emerald-400 font-medium text-lg key-press">%</button>
-            <button @click="appendOperator('/')" class="bg-emerald-500 dark:bg-emerald-600 text-white text-xl key-press">÷</button>
+        <!-- SECTION: Keypad -->
+        <section id="keypad-area" class="grid grid-cols-4 gap-[1px] bg-gray-200 dark:bg-black shrink-0 p-[1px] pb-[env(safe-area-inset-bottom)] select-none z-30 shadow-[0_-4px_10px_rgba(0,0,0,0.03)]">
+            <!-- Row 1 -->
+            <button @click="handleAC" class="sem-key-func bg-gray-100 dark:bg-dark-btn text-red-500 font-medium text-lg h-[56px] effect-key-active transition-all duration-200">{{ isAC ? 'AC' : 'C' }}</button>
+            <button @click="backspace" class="sem-key-func bg-gray-100 dark:bg-dark-btn text-gray-600 dark:text-gray-300 font-medium text-xl effect-key-active"><i class="fa-solid fa-delete-left"></i></button>
+            <button @click="applyPercentage" class="sem-key-func bg-gray-100 dark:bg-dark-btn text-emerald-600 dark:text-emerald-400 font-medium text-lg effect-key-active">%</button>
+            <button @click="appendOperator('/')" class="sem-key-op bg-emerald-500 dark:bg-emerald-600 text-white text-xl effect-key-active">÷</button>
 
-            <button @click="appendNumber('7')" class="bg-white dark:bg-dark-card text-gray-800 dark:text-white text-2xl font-light h-[64px] key-press">7</button>
-            <button @click="appendNumber('8')" class="bg-white dark:bg-dark-card text-gray-800 dark:text-white text-2xl font-light key-press">8</button>
-            <button @click="appendNumber('9')" class="bg-white dark:bg-dark-card text-gray-800 dark:text-white text-2xl font-light key-press">9</button>
-            <button @click="appendOperator('*')" class="bg-emerald-500 dark:bg-emerald-600 text-white text-xl key-press">×</button>
+            <!-- Row 2 -->
+            <button @click="appendNumber('7')" class="sem-key-num bg-white dark:bg-dark-card text-gray-800 dark:text-white text-2xl font-light h-[56px] effect-key-active">7</button>
+            <button @click="appendNumber('8')" class="sem-key-num bg-white dark:bg-dark-card text-gray-800 dark:text-white text-2xl font-light effect-key-active">8</button>
+            <button @click="appendNumber('9')" class="sem-key-num bg-white dark:bg-dark-card text-gray-800 dark:text-white text-2xl font-light effect-key-active">9</button>
+            <button @click="appendOperator('*')" class="sem-key-op bg-emerald-500 dark:bg-emerald-600 text-white text-xl effect-key-active">×</button>
 
-            <button @click="appendNumber('4')" class="bg-white dark:bg-dark-card text-gray-800 dark:text-white text-2xl font-light h-[64px] key-press">4</button>
-            <button @click="appendNumber('5')" class="bg-white dark:bg-dark-card text-gray-800 dark:text-white text-2xl font-light key-press">5</button>
-            <button @click="appendNumber('6')" class="bg-white dark:bg-dark-card text-gray-800 dark:text-white text-2xl font-light key-press">6</button>
-            <button @click="appendOperator('-')" class="bg-emerald-500 dark:bg-emerald-600 text-white text-xl key-press">-</button>
+            <!-- Row 3 -->
+            <button @click="appendNumber('4')" class="sem-key-num bg-white dark:bg-dark-card text-gray-800 dark:text-white text-2xl font-light h-[56px] effect-key-active">4</button>
+            <button @click="appendNumber('5')" class="sem-key-num bg-white dark:bg-dark-card text-gray-800 dark:text-white text-2xl font-light effect-key-active">5</button>
+            <button @click="appendNumber('6')" class="sem-key-num bg-white dark:bg-dark-card text-gray-800 dark:text-white text-2xl font-light effect-key-active">6</button>
+            <button @click="appendOperator('-')" class="sem-key-op bg-emerald-500 dark:bg-emerald-600 text-white text-xl effect-key-active">-</button>
 
-            <button @click="appendNumber('1')" class="bg-white dark:bg-dark-card text-gray-800 dark:text-white text-2xl font-light h-[64px] key-press">1</button>
-            <button @click="appendNumber('2')" class="bg-white dark:bg-dark-card text-gray-800 dark:text-white text-2xl font-light key-press">2</button>
-            <button @click="appendNumber('3')" class="bg-white dark:bg-dark-card text-gray-800 dark:text-white text-2xl font-light key-press">3</button>
-            <button @click="appendOperator('+')" class="bg-emerald-500 dark:bg-emerald-600 text-white text-xl key-press">+</button>
+            <!-- Row 4 -->
+            <button @click="appendNumber('1')" class="sem-key-num bg-white dark:bg-dark-card text-gray-800 dark:text-white text-2xl font-light h-[56px] effect-key-active">1</button>
+            <button @click="appendNumber('2')" class="sem-key-num bg-white dark:bg-dark-card text-gray-800 dark:text-white text-2xl font-light effect-key-active">2</button>
+            <button @click="appendNumber('3')" class="sem-key-num bg-white dark:bg-dark-card text-gray-800 dark:text-white text-2xl font-light effect-key-active">3</button>
+            <button @click="appendOperator('+')" class="sem-key-op bg-emerald-500 dark:bg-emerald-600 text-white text-xl effect-key-active">+</button>
 
-            <button @click="appendNumber('0')" class="bg-white dark:bg-dark-card text-gray-800 dark:text-white text-2xl font-light h-[64px] key-press">0</button>
-            <button @click="appendNumber('00')" class="bg-white dark:bg-dark-card text-gray-800 dark:text-white text-xl font-light key-press tracking-tight">00</button>
-            <button @click="appendNumber('.')" class="bg-white dark:bg-dark-card text-gray-800 dark:text-white text-2xl font-light key-press">.</button>
-            <button @click="calculateFinal" class="bg-emerald-600 dark:bg-emerald-500 text-white text-xl key-press">=</button>
+            <!-- Row 5 -->
+            <button @click="appendNumber('0')" class="sem-key-num bg-white dark:bg-dark-card text-gray-800 dark:text-white text-2xl font-light h-[56px] effect-key-active">0</button>
+            <button @click="appendNumber('00')" class="sem-key-num bg-white dark:bg-dark-card text-gray-800 dark:text-white text-xl font-light effect-key-active tracking-tight">00</button>
+            <button @click="appendNumber('.')" class="sem-key-num bg-white dark:bg-dark-card text-gray-800 dark:text-white text-2xl font-light effect-key-active">.</button>
+            <button @click="calculateFinal" class="sem-key-equal bg-emerald-600 dark:bg-emerald-500 text-white text-xl effect-key-active">=</button>
         </section>
 
-        <!-- 彈窗組件 -->
+        <!-- MODAL: Info -->
         <transition enter-active-class="transition duration-300 ease-out" enter-from-class="opacity-0 scale-95" enter-to-class="opacity-100 scale-100" leave-active-class="transition duration-200 ease-in" leave-from-class="opacity-100 scale-100" leave-to-class="opacity-0 scale-95">
-            <div v-if="isInfoOpen" class="absolute inset-0 z-50 flex items-center justify-center p-6 modal-backdrop bg-black/20 dark:bg-black/50" @click.self="isInfoOpen = false">
+            <div v-if="isInfoOpen" id="modal-info" class="absolute inset-0 z-50 flex items-center justify-center p-6 modal-backdrop bg-black/20 dark:bg-black/50" @click.self="isInfoOpen = false">
                 <div class="bg-white dark:bg-dark-card w-full max-w-sm rounded-3xl p-6 shadow-2xl transform transition-all border border-gray-100 dark:border-gray-800">
                     <div class="flex justify-between items-center mb-6">
                         <h2 class="text-xl font-bold text-gray-800 dark:text-white">關於 CoinFlow</h2>
@@ -239,14 +246,15 @@
                         <div class="text-xs text-gray-400 dark:text-dark-sub leading-relaxed border-t border-gray-100 dark:border-gray-800 pt-4">
                             <p class="mb-2"><strong class="text-gray-500 dark:text-gray-400">免責聲明：</strong></p><p>本應用程式提供之匯率資料僅供參考。實際交易匯率請以您的銀行、信用卡發卡機構或交易櫃檯當下公告之買賣匯率為準。</p>
                         </div>
-                        <div class="text-center text-[10px] text-gray-300 dark:text-gray-700 font-mono">v4.6.0</div>
+                        <div class="text-center text-[10px] text-gray-300 dark:text-gray-700 font-mono">v4.7.0</div>
                     </div>
                 </div>
             </div>
         </transition>
 
+        <!-- MODAL: Currency Selector -->
         <transition enter-active-class="transition duration-300 ease-out" enter-from-class="translate-y-full" enter-to-class="translate-y-0" leave-active-class="transition duration-200 ease-in" leave-from-class="translate-y-0" leave-to-class="translate-y-full">
-            <div v-if="isModalOpen" class="absolute inset-0 bg-white dark:bg-dark-bg z-50 flex flex-col pt-[env(safe-area-inset-top)]">
+            <div v-if="isModalOpen" id="modal-selector" class="absolute inset-0 bg-white dark:bg-dark-bg z-50 flex flex-col pt-[env(safe-area-inset-top)]">
                 <div class="px-4 py-4 border-b border-gray-100 dark:border-gray-800 flex items-center gap-3 shrink-0">
                     <button @click="isModalOpen = false" class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500 transition"><i class="fa-solid fa-xmark text-lg"></i></button>
                     <input ref="searchInput" v-model="searchQuery" type="text" placeholder="搜尋貨幣..." class="w-full bg-gray-100 dark:bg-dark-card dark:text-white rounded-xl px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-emerald-500">
@@ -262,8 +270,9 @@
             </div>
         </transition>
 
+        <!-- MODAL: History -->
         <transition enter-active-class="transition duration-300 ease-out" enter-from-class="translate-y-full" enter-to-class="translate-y-0" leave-active-class="transition duration-200 ease-in" leave-from-class="translate-y-0" leave-to-class="translate-y-full">
-            <div v-if="isHistoryOpen" class="absolute inset-0 bg-gray-50 dark:bg-dark-bg z-50 flex flex-col pt-[env(safe-area-inset-top)]">
+            <div v-if="isHistoryOpen" id="modal-history" class="absolute inset-0 bg-gray-50 dark:bg-dark-bg z-50 flex flex-col pt-[env(safe-area-inset-top)]">
                 <div class="px-6 py-4 bg-white dark:bg-dark-card border-b border-gray-100 dark:border-gray-800 flex items-center justify-between shrink-0 shadow-sm">
                     <button @click="isHistoryOpen = false"><i class="fa-solid fa-chevron-down text-lg text-gray-500"></i></button>
                     <h2 class="font-bold text-lg text-gray-800 dark:text-white">歷史紀錄</h2>
