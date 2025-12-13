@@ -24,8 +24,8 @@ jobs:
         id: fetch
         run: |
           # 使用 curl 下載資料到暫存檔 temp_rates.json
-          # 這裡使用 frankfurter API (免費/無須Key)，以 USD 為基準
-          curl -f -s "https://api.frankfurter.app/latest?from=USD" > temp_rates.json
+          # 改用 open.er-api.com，因為它支援 TWD (台灣) 以及更多亞洲貨幣
+          curl -f -s "https://open.er-api.com/v6/latest/USD" > temp_rates.json
           echo "Download complete."
 
       - name: Validate JSON (Parsing Check)
@@ -43,9 +43,19 @@ jobs:
       - name: Process and Save Data
         run: |
           # 格式化並覆蓋正式檔案 (這裡才寫入 docs/rates.json)
-          cat temp_rates.json | jq . > docs/rates.json
+          # 使用 jq 轉換欄位名稱以符合我們 App 的需求：
+          # 1. .base_code -> .base
+          # 2. .time_last_update_utc -> .date (擷取前 16 個字元當作日期顯示)
+          # 3. .rates -> .rates (確保包含 TWD)
+          cat temp_rates.json | jq '{base: .base_code, date: .time_last_update_utc[0:16], rates: .rates}' > docs/rates.json
+          
           rm temp_rates.json
-          head -n 5 docs/rates.json
+          
+          # 確認輸出的內容包含 TWD
+          echo "Checking for TWD..."
+          grep -o "TWD" docs/rates.json || echo "Warning: TWD not found in response"
+          
+          head -n 10 docs/rates.json
 
       - name: Commit and Push
         run: |
@@ -55,7 +65,7 @@ jobs:
           # 檢查是否有變更
           if [[ -n $(git status -s docs/rates.json) ]]; then
             git add docs/rates.json
-            git commit -m "Update exchange rates data [skip ci]"
+            git commit -m "Update exchange rates data (Added TWD support) [skip ci]"
             git push
             echo "Rates updated successfully."
           else
