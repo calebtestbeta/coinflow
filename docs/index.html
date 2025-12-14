@@ -13,12 +13,16 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     
-    <title>CoinFlow - 極簡匯率計算機</title>
-    <meta name="description" content="專為旅行者與代購設計的匯率計算機。支援多國貨幣即時換算、算式累加與歷史紀錄。">
+    <title>WAYFARER CALCULATOR</title>
+    <meta name="description" content="專為旅行者設計的極簡匯率計算機。支援多國貨幣即時換算、算式累加與歷史紀錄。">
     <meta property="og:type" content="website">
-    <meta property="og:title" content="CoinFlow">
+    <meta property="og:title" content="WAYFARER CALCULATOR">
     <meta property="og:description" content="旅行、代購的好幫手！支援算式輸入、即時多國匯率轉換。">
-    <meta property="og:image" content="https://calebtestbeta.github.io/coinflow/preview.png">
+    <meta property="og:image" content="https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Travel%20and%20places/Money%20with%20Wings.png">
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='24' fill='%230ea5e9'/%3E%3Cpath d='M22 34 L38 74 L50 48 L62 74 L78 34' fill='none' stroke='white' stroke-width='8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+    <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%230ea5e9'/%3E%3Cpath d='M22 34 L38 74 L50 48 L62 74 L78 34' fill='none' stroke='white' stroke-width='8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
 
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
@@ -59,11 +63,9 @@
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .tabular-nums { font-variant-numeric: tabular-nums; }
         
-        /* 互動效果 Class 命名優化 */
         .effect-press:active { transform: scale(0.92); transition: transform 0.1s; }
         .effect-key-active:active { filter: brightness(1.2); }
         
-        /* 動畫 Class */
         .anim-list-move, .anim-list-enter-active, .anim-list-leave-active { transition: all 0.3s ease; }
         .anim-list-enter-from, .anim-list-leave-to { opacity: 0; transform: translateY(10px); }
         .anim-list-leave-active { position: absolute; width: 100%; }
@@ -75,66 +77,47 @@
 
     <div id="app" class="w-full max-w-md h-full shadow-2xl flex flex-col relative overflow-hidden transition-colors duration-300 bg-white dark:bg-dark-bg dark:text-dark-text">
         
-        <!-- UI: Toast Notification -->
+        <!-- Toast Notification -->
         <transition name="anim-list">
             <div v-if="showToast" id="toast-notification" class="absolute top-24 left-1/2 -translate-x-1/2 bg-gray-900/90 dark:bg-white/90 backdrop-blur text-white dark:text-gray-900 px-4 py-2 rounded-full text-sm shadow-xl z-50 flex items-center gap-2 pointer-events-none">
                 <i class="fa-solid fa-check text-emerald-400 dark:text-emerald-600"></i> {{ toastMessage }}
             </div>
         </transition>
 
-        <!-- SECTION: Header -->
+        <!-- Header -->
         <header id="app-header" class="flex justify-between items-center px-5 py-3 shrink-0 pt-[max(1rem,env(safe-area-inset-top))] z-20">
-            <button 
-                id="btn-info"
-                @click="isInfoOpen = true" 
-                class="w-10 h-10 rounded-full flex items-center justify-center text-gray-400 hover:text-emerald-500 dark:text-gray-500 transition effect-press"
-            >
+            <button id="btn-info" @click="openInfo" class="w-10 h-10 rounded-full flex items-center justify-center text-gray-400 hover:text-emerald-500 dark:text-gray-500 transition effect-press">
                 <i class="fa-solid fa-circle-info text-xl"></i>
             </button>
-
             <div class="flex flex-col items-center opacity-80">
-                <h1 class="font-bold text-gray-800 dark:text-white tracking-widest text-sm select-none">COINFLOW</h1>
+                <h1 class="font-bold text-gray-800 dark:text-white tracking-widest text-sm select-none uppercase">WAYFARER</h1>
             </div>
-            
-            <button 
-                id="btn-history"
-                @click="isHistoryOpen = true" 
-                class="w-10 h-10 rounded-full flex items-center justify-center text-gray-400 hover:text-emerald-500 dark:text-gray-500 transition effect-press relative"
-            >
+            <button id="btn-history" @click="openHistory" class="w-10 h-10 rounded-full flex items-center justify-center text-gray-400 hover:text-emerald-500 dark:text-gray-500 transition effect-press relative">
                 <i class="fa-solid fa-clock-rotate-left text-xl"></i>
-                <span v-if="history.length > 0" class="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-white dark:border-dark-bg"></span>
+                <span v-if="hasHistory" class="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-white dark:border-dark-bg"></span>
             </button>
         </header>
 
-        <!-- SECTION: Master Display (Source Currency) -->
+        <!-- Master Display -->
         <section id="source-display-area" class="px-4 pb-2 shrink-0 z-10">
-            <div 
-                @click="openModal('source')"
-                class="bg-white dark:bg-dark-card rounded-[1.5rem] p-4 shadow-sm border border-gray-100 dark:border-gray-800 relative overflow-hidden transition-all duration-300 effect-press cursor-pointer"
-            >
-                <button 
-                    id="btn-undo"
-                    @click.stop="undo" 
-                    v-if="canUndo"
-                    class="absolute top-4 right-4 text-gray-300 hover:text-emerald-500 dark:text-gray-600 dark:hover:text-emerald-400 transition p-2 z-20"
-                >
+            <div class="bg-white dark:bg-dark-card rounded-[1.5rem] p-4 shadow-sm border border-gray-100 dark:border-gray-800 relative overflow-hidden transition-all duration-300">
+                <button id="btn-undo" @click.stop="undo" v-if="canUndo" class="absolute top-4 right-4 text-gray-300 hover:text-emerald-500 dark:text-gray-600 dark:hover:text-emerald-400 transition p-2 z-20">
                     <i class="fa-solid fa-rotate-left"></i>
                 </button>
-
-                <!-- Source Info -->
-                <div class="flex items-center gap-3 mb-2">
-                    <span class="text-3xl shadow-sm rounded-full overflow-hidden">{{ getFlag(sourceCurrency) }}</span>
+                
+                <div @click="openSourceSelector" class="flex items-center gap-3 mb-2 cursor-pointer p-1 -ml-1 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors w-fit effect-press">
+                    <span class="text-3xl shadow-sm rounded-full overflow-hidden">{{ sourceFlag }}</span>
                     <div class="flex flex-col">
                         <span class="font-bold text-xl leading-none dark:text-white flex items-center gap-1">
                             {{ sourceCurrency }}
                             <i class="fa-solid fa-caret-down text-[10px] text-gray-300 dark:text-gray-600"></i>
                         </span>
-                        <span class="text-[10px] text-gray-400 dark:text-gray-500 font-medium mt-0.5">{{ rates[sourceCurrency]?.name }}</span>
+                        <span class="text-[10px] text-gray-400 dark:text-gray-500 font-medium mt-0.5">{{ sourceName }}</span>
                     </div>
                 </div>
 
-                <!-- Calculation Display -->
-                <div class="text-right flex flex-col justify-end min-h-[70px]">
+                <div @click="copyResult" class="text-right flex flex-col justify-end min-h-[70px] cursor-pointer group relative active:opacity-60 transition-opacity">
+                    <div class="absolute top-0 right-0 text-[10px] text-gray-300 dark:text-gray-600 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">點擊複製</div>
                     <div id="formula-display" class="text-emerald-600 dark:text-emerald-400 font-mono text-sm tracking-wide break-all opacity-80 mb-1 leading-tight min-h-[1.25em]">
                         {{ fullExpressionDisplay }}
                     </div>
@@ -145,88 +128,82 @@
             </div>
         </section>
 
-        <!-- SECTION: Target List (Currency Rates) -->
-        <section id="target-list-area" class="flex-grow overflow-y-auto px-4 py-2 space-y-2 relative">
-            <!-- Scroll Hints -->
+        <!-- Target List -->
+        <section id="target-list-area" class="flex-grow min-h-0 overflow-y-auto px-4 py-2 space-y-2 relative">
             <div class="pointer-events-none absolute inset-x-0 top-0 h-6 bg-gradient-to-b from-gray-50 to-transparent z-10 dark:from-dark-bg"></div>
-            
             <div class="flex items-center justify-between px-2 mb-1 opacity-50 relative z-0">
                 <span class="text-[10px] font-bold uppercase tracking-widest text-gray-400 dark:text-gray-600">Rates</span>
-                <button id="btn-add-currency" @click="openAddModal" class="text-xs text-emerald-600 dark:text-emerald-500 font-medium flex items-center gap-1 effect-press">
+                <button id="btn-add-currency" @click="openAddSelector" class="text-xs text-emerald-600 dark:text-emerald-500 font-medium flex items-center gap-1 effect-press">
                     <i class="fa-solid fa-circle-plus"></i> 新增
                 </button>
             </div>
-
             <transition-group name="anim-list">
-                <div 
-                    v-for="(code, index) in targetCurrencies" 
-                    :key="code" 
-                    class="sem-currency-row group flex items-center justify-between p-3 rounded-xl hover:bg-white dark:hover:bg-dark-card border border-transparent hover:border-gray-100 dark:hover:border-gray-800 transition-all duration-200 cursor-pointer relative z-0" 
-                    @click="swapToSource(index)"
-                >
+                <div v-for="(item, index) in targetListDisplay" :key="item.code" class="sem-currency-row group flex items-center justify-between p-3 rounded-xl hover:bg-white dark:hover:bg-dark-card border border-transparent hover:border-gray-100 dark:hover:border-gray-800 transition-all duration-200 cursor-pointer relative z-0" @click="swapToSource(index)">
                     <div class="flex items-center gap-3">
-                        <span class="text-xl rounded-full opacity-90 group-hover:opacity-100 transition-opacity">{{ getFlag(code) }}</span>
+                        <span class="text-xl rounded-full opacity-90 group-hover:opacity-100 transition-opacity">{{ item.flag }}</span>
                         <div class="flex flex-col">
                             <div class="flex items-baseline gap-2">
-                                <span class="font-bold text-gray-700 dark:text-gray-200 text-sm">{{ code }}</span>
-                                <span class="text-[10px] text-gray-400 dark:text-gray-600">1 {{ sourceCurrency }} = {{ (getRate(code)/getRate(sourceCurrency)).toFixed(3) }}</span>
+                                <span class="font-bold text-gray-700 dark:text-gray-200 text-sm">{{ item.code }}</span>
+                                <span class="text-[10px] text-gray-400 dark:text-gray-600">1 {{ sourceCurrency }} = {{ item.rateDisplay }}</span>
                             </div>
                         </div>
                     </div>
                     <div class="flex items-center gap-3">
                         <div class="text-right">
-                            <div class="text-lg font-medium text-gray-800 dark:text-gray-100 tabular-nums tracking-tight">{{ calculateTargetValue(code) }}</div>
+                            <div class="text-lg font-medium text-gray-800 dark:text-gray-100 tabular-nums tracking-tight">{{ item.valueDisplay }}</div>
                         </div>
-                        <button @click.stop="removeTarget(index)" class="sem-btn-delete w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-500 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center justify-center transition">
-                            <i class="fa-solid fa-minus text-[10px]"></i>
+                        <button 
+                            @click.stop="triggerDelete(index)" 
+                            class="sem-btn-delete h-8 rounded-full flex items-center justify-center transition-all duration-200 ease-out"
+                            :class="deleteConfirmIndex === index 
+                                ? 'w-12 bg-red-500 text-white shadow-md' 
+                                : 'w-8 bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-500 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20'"
+                        >
+                            <span v-if="deleteConfirmIndex === index" class="text-xs font-bold whitespace-nowrap">刪除</span>
+                            <i v-else class="fa-solid fa-minus text-[10px]"></i>
                         </button>
                     </div>
                 </div>
             </transition-group>
-            
             <div class="pointer-events-none absolute inset-x-0 bottom-0 h-6 bg-gradient-to-t from-gray-50 to-transparent z-10 dark:from-dark-bg"></div>
             <div class="h-4"></div>
         </section>
 
-        <!-- SECTION: Keypad -->
+        <!-- Keypad -->
         <section id="keypad-area" class="grid grid-cols-4 gap-[1px] bg-gray-200 dark:bg-black shrink-0 p-[1px] pb-[env(safe-area-inset-bottom)] select-none z-30 shadow-[0_-4px_10px_rgba(0,0,0,0.03)]">
-            <!-- Row 1 -->
             <button @click="handleAC" class="sem-key-func bg-gray-100 dark:bg-dark-btn text-red-500 font-medium text-lg h-[56px] effect-key-active transition-all duration-200">{{ isAC ? 'AC' : 'C' }}</button>
             <button @click="backspace" class="sem-key-func bg-gray-100 dark:bg-dark-btn text-gray-600 dark:text-gray-300 font-medium text-xl effect-key-active"><i class="fa-solid fa-delete-left"></i></button>
             <button @click="applyPercentage" class="sem-key-func bg-gray-100 dark:bg-dark-btn text-emerald-600 dark:text-emerald-400 font-medium text-lg effect-key-active">%</button>
             <button @click="appendOperator('/')" class="sem-key-op bg-emerald-500 dark:bg-emerald-600 text-white text-xl effect-key-active">÷</button>
 
-            <!-- Row 2 -->
             <button @click="appendNumber('7')" class="sem-key-num bg-white dark:bg-dark-card text-gray-800 dark:text-white text-2xl font-light h-[56px] effect-key-active">7</button>
             <button @click="appendNumber('8')" class="sem-key-num bg-white dark:bg-dark-card text-gray-800 dark:text-white text-2xl font-light effect-key-active">8</button>
             <button @click="appendNumber('9')" class="sem-key-num bg-white dark:bg-dark-card text-gray-800 dark:text-white text-2xl font-light effect-key-active">9</button>
             <button @click="appendOperator('*')" class="sem-key-op bg-emerald-500 dark:bg-emerald-600 text-white text-xl effect-key-active">×</button>
 
-            <!-- Row 3 -->
             <button @click="appendNumber('4')" class="sem-key-num bg-white dark:bg-dark-card text-gray-800 dark:text-white text-2xl font-light h-[56px] effect-key-active">4</button>
             <button @click="appendNumber('5')" class="sem-key-num bg-white dark:bg-dark-card text-gray-800 dark:text-white text-2xl font-light effect-key-active">5</button>
             <button @click="appendNumber('6')" class="sem-key-num bg-white dark:bg-dark-card text-gray-800 dark:text-white text-2xl font-light effect-key-active">6</button>
             <button @click="appendOperator('-')" class="sem-key-op bg-emerald-500 dark:bg-emerald-600 text-white text-xl effect-key-active">-</button>
 
-            <!-- Row 4 -->
             <button @click="appendNumber('1')" class="sem-key-num bg-white dark:bg-dark-card text-gray-800 dark:text-white text-2xl font-light h-[56px] effect-key-active">1</button>
             <button @click="appendNumber('2')" class="sem-key-num bg-white dark:bg-dark-card text-gray-800 dark:text-white text-2xl font-light effect-key-active">2</button>
             <button @click="appendNumber('3')" class="sem-key-num bg-white dark:bg-dark-card text-gray-800 dark:text-white text-2xl font-light effect-key-active">3</button>
             <button @click="appendOperator('+')" class="sem-key-op bg-emerald-500 dark:bg-emerald-600 text-white text-xl effect-key-active">+</button>
 
-            <!-- Row 5 -->
             <button @click="appendNumber('0')" class="sem-key-num bg-white dark:bg-dark-card text-gray-800 dark:text-white text-2xl font-light h-[56px] effect-key-active">0</button>
             <button @click="appendNumber('00')" class="sem-key-num bg-white dark:bg-dark-card text-gray-800 dark:text-white text-xl font-light effect-key-active tracking-tight">00</button>
             <button @click="appendNumber('.')" class="sem-key-num bg-white dark:bg-dark-card text-gray-800 dark:text-white text-2xl font-light effect-key-active">.</button>
             <button @click="calculateFinal" class="sem-key-equal bg-emerald-600 dark:bg-emerald-500 text-white text-xl effect-key-active">=</button>
         </section>
 
-        <!-- MODAL: Info -->
+        <!-- Modals -->
+        <!-- Info Modal -->
         <transition enter-active-class="transition duration-300 ease-out" enter-from-class="opacity-0 scale-95" enter-to-class="opacity-100 scale-100" leave-active-class="transition duration-200 ease-in" leave-from-class="opacity-100 scale-100" leave-to-class="opacity-0 scale-95">
             <div v-if="isInfoOpen" id="modal-info" class="absolute inset-0 z-50 flex items-center justify-center p-6 modal-backdrop bg-black/20 dark:bg-black/50" @click.self="isInfoOpen = false">
                 <div class="bg-white dark:bg-dark-card w-full max-w-sm rounded-3xl p-6 shadow-2xl transform transition-all border border-gray-100 dark:border-gray-800">
                     <div class="flex justify-between items-center mb-6">
-                        <h2 class="text-xl font-bold text-gray-800 dark:text-white">關於 CoinFlow</h2>
+                        <h2 class="text-xl font-bold text-gray-800 dark:text-white">關於 Wayfarer Coinflow</h2>
                         <button @click="isInfoOpen = false" class="w-8 h-8 rounded-full bg-gray-100 dark:bg-dark-btn flex items-center justify-center text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 transition"><i class="fa-solid fa-xmark"></i></button>
                     </div>
                     <div class="space-y-6">
@@ -236,23 +213,18 @@
                         </div>
                         <div class="flex items-center justify-between p-2">
                             <span class="text-gray-600 dark:text-gray-300 font-medium">深色模式</span>
-                            <button @click="toggleTheme" class="relative inline-flex h-8 w-14 items-center rounded-full transition-colors duration-300 focus:outline-none" :class="isDarkMode ? 'bg-emerald-500' : 'bg-gray-200'">
-                                <span class="inline-block h-6 w-6 transform rounded-full bg-white shadow transition-transform duration-300" :class="isDarkMode ? 'translate-x-7' : 'translate-x-1'">
-                                    <i v-if="isDarkMode" class="fa-solid fa-moon text-emerald-500 text-xs absolute top-1.5 left-1.5"></i>
-                                    <i v-else class="fa-solid fa-sun text-yellow-500 text-xs absolute top-1.5 left-1.5"></i>
-                                </span>
-                            </button>
+                            <button @click="toggleTheme" class="relative inline-flex h-8 w-14 items-center rounded-full transition-colors duration-300 focus:outline-none" :class="isDarkMode ? 'bg-emerald-500' : 'bg-gray-200'"><span class="inline-block h-6 w-6 transform rounded-full bg-white shadow transition-transform duration-300" :class="isDarkMode ? 'translate-x-7' : 'translate-x-1'"><i v-if="isDarkMode" class="fa-solid fa-moon text-emerald-500 text-xs absolute top-1.5 left-1.5"></i><i v-else class="fa-solid fa-sun text-yellow-500 text-xs absolute top-1.5 left-1.5"></i></span></button>
                         </div>
                         <div class="text-xs text-gray-400 dark:text-dark-sub leading-relaxed border-t border-gray-100 dark:border-gray-800 pt-4">
                             <p class="mb-2"><strong class="text-gray-500 dark:text-gray-400">免責聲明：</strong></p><p>本應用程式提供之匯率資料僅供參考。實際交易匯率請以您的銀行、信用卡發卡機構或交易櫃檯當下公告之買賣匯率為準。</p>
                         </div>
-                        <div class="text-center text-[10px] text-gray-300 dark:text-gray-700 font-mono">v4.7.0</div>
+                        <div class="text-center text-[10px] text-gray-300 dark:text-gray-700 font-mono">v1.0.0</div>
                     </div>
                 </div>
             </div>
         </transition>
 
-        <!-- MODAL: Currency Selector -->
+        <!-- Currency Selector Modal -->
         <transition enter-active-class="transition duration-300 ease-out" enter-from-class="translate-y-full" enter-to-class="translate-y-0" leave-active-class="transition duration-200 ease-in" leave-from-class="translate-y-0" leave-to-class="translate-y-full">
             <div v-if="isModalOpen" id="modal-selector" class="absolute inset-0 bg-white dark:bg-dark-bg z-50 flex flex-col pt-[env(safe-area-inset-top)]">
                 <div class="px-4 py-4 border-b border-gray-100 dark:border-gray-800 flex items-center gap-3 shrink-0">
@@ -270,13 +242,13 @@
             </div>
         </transition>
 
-        <!-- MODAL: History -->
+        <!-- History Modal -->
         <transition enter-active-class="transition duration-300 ease-out" enter-from-class="translate-y-full" enter-to-class="translate-y-0" leave-active-class="transition duration-200 ease-in" leave-from-class="translate-y-0" leave-to-class="translate-y-full">
             <div v-if="isHistoryOpen" id="modal-history" class="absolute inset-0 bg-gray-50 dark:bg-dark-bg z-50 flex flex-col pt-[env(safe-area-inset-top)]">
                 <div class="px-6 py-4 bg-white dark:bg-dark-card border-b border-gray-100 dark:border-gray-800 flex items-center justify-between shrink-0 shadow-sm">
-                    <button @click="isHistoryOpen = false"><i class="fa-solid fa-chevron-down text-lg text-gray-500"></i></button>
-                    <h2 class="font-bold text-lg text-gray-800 dark:text-white">歷史紀錄</h2>
                     <button @click="handleClearHistory" class="text-red-500 text-sm font-medium">{{ confirmDelete ? '確認' : '清除' }}</button>
+                    <h2 class="font-bold text-lg text-gray-800 dark:text-white">歷史紀錄</h2>
+                    <button @click="isHistoryOpen = false"><i class="fa-solid fa-chevron-down text-lg text-gray-500"></i></button>
                 </div>
                 <div class="flex-grow overflow-y-auto p-4 space-y-3">
                     <div v-if="history.length === 0" class="flex flex-col items-center justify-center h-64 text-gray-400 gap-2"><p class="text-sm">無紀錄</p></div>
@@ -291,41 +263,187 @@
     </div>
 
     <script>
-        const { createApp, ref, computed, onMounted, watch, nextTick } = Vue;
+        const { createApp, ref, computed, onMounted, watch, nextTick, reactive } = Vue;
+
+        const AppConfig = {
+            STORAGE_KEY: 'wayfarer_prefs_v1',
+            MAX_HISTORY_ITEMS: 20
+        };
+
+        const currencyMeta = {
+            "AED": { name: "阿聯迪拉姆", flag: "🇦🇪", symbol: "د.إ" },
+            "AFN": { name: "阿富汗尼", flag: "🇦🇫", symbol: "؋" },
+            "ALL": { name: "阿爾巴尼亞列克", flag: "🇦🇱", symbol: "L" },
+            "AMD": { name: "亞美尼亞德拉姆", flag: "🇦🇲", symbol: "֏" },
+            "ANG": { name: "荷屬安的列斯盾", flag: "🇨🇼", symbol: "ƒ" },
+            "AOA": { name: "安哥拉寬扎", flag: "🇦🇴", symbol: "Kz" },
+            "ARS": { name: "阿根廷披索", flag: "🇦🇷", symbol: "$" },
+            "AUD": { name: "澳幣", flag: "🇦🇺", symbol: "$" },
+            "AWG": { name: "阿魯巴弗羅林", flag: "🇦🇼", symbol: "ƒ" },
+            "AZN": { name: "亞塞拜然馬納特", flag: "🇦🇿", symbol: "₼" },
+            "BAM": { name: "波士尼亞馬克", flag: "🇧🇦", symbol: "KM" },
+            "BBD": { name: "巴貝多元", flag: "🇧🇧", symbol: "$" },
+            "BDT": { name: "孟加拉塔卡", flag: "🇧🇩", symbol: "৳" },
+            "BGN": { name: "保加利亞列弗", flag: "🇧🇬", symbol: "лв" },
+            "BHD": { name: "巴林第納爾", flag: "🇧🇭", symbol: ".د.ب" },
+            "BIF": { name: "蒲隆地法郎", flag: "🇧🇮", symbol: "Fr" },
+            "BMD": { name: "百慕達元", flag: "🇧🇲", symbol: "$" },
+            "BND": { name: "汶萊元", flag: "🇧🇳", symbol: "$" },
+            "BOB": { name: "玻利維亞諾", flag: "🇧🇴", symbol: "Bs." },
+            "BRL": { name: "巴西雷亞爾", flag: "🇧🇷", symbol: "R$" },
+            "BSD": { name: "巴哈馬元", flag: "🇧🇸", symbol: "$" },
+            "BTN": { name: "不丹努爾特魯姆", flag: "🇧🇹", symbol: "Nu." },
+            "BWP": { name: "波札那普拉", flag: "🇧🇼", symbol: "P" },
+            "BYN": { name: "白俄羅斯盧布", flag: "🇧🇾", symbol: "Br" },
+            "BZD": { name: "貝里斯元", flag: "🇧🇿", symbol: "$" },
+            "CAD": { name: "加幣", flag: "🇨🇦", symbol: "$" },
+            "CDF": { name: "剛果法郎", flag: "🇨🇩", symbol: "Fr" },
+            "CHF": { name: "瑞士法郎", flag: "🇨🇭", symbol: "Fr" },
+            "CLF": { name: "智利發展單位", flag: "🇨🇱", symbol: "UF" },
+            "CLP": { name: "智利披索", flag: "🇨🇱", symbol: "$" },
+            "CNH": { name: "離岸人民幣", flag: "🇨🇳", symbol: "¥" },
+            "CNY": { name: "人民幣", flag: "🇨🇳", symbol: "¥" },
+            "COP": { name: "哥倫比亞披索", flag: "🇨🇴", symbol: "$" },
+            "CRC": { name: "哥斯大黎加科朗", flag: "🇨🇷", symbol: "₡" },
+            "CUP": { name: "古巴披索", flag: "🇨🇺", symbol: "$" },
+            "CVE": { name: "維德角埃斯庫多", flag: "🇨🇻", symbol: "$" },
+            "CZK": { name: "捷克克朗", flag: "🇨🇿", symbol: "Kč" },
+            "DJF": { name: "吉布地法郎", flag: "🇩🇯", symbol: "Fr" },
+            "DKK": { name: "丹麥克朗", flag: "🇩🇰", symbol: "kr" },
+            "DOP": { name: "多明尼加披索", flag: "🇩🇴", symbol: "RD$" },
+            "DZD": { name: "阿爾及利亞第納爾", flag: "🇩🇿", symbol: "د.ج" },
+            "EGP": { name: "埃及鎊", flag: "🇪🇬", symbol: "£" },
+            "ERN": { name: "厄利垂亞納克法", flag: "🇪🇷", symbol: "Nfk" },
+            "ETB": { name: "衣索比亞比爾", flag: "🇪🇹", symbol: "Br" },
+            "EUR": { name: "歐元", flag: "🇪🇺", symbol: "€" },
+            "FJD": { name: "斐濟元", flag: "🇫🇯", symbol: "$" },
+            "FKP": { name: "福克蘭群島鎊", flag: "🇫🇰", symbol: "£" },
+            "FOK": { name: "法羅群島克朗", flag: "🇫🇴", symbol: "kr" },
+            "GBP": { name: "英鎊", flag: "🇬🇧", symbol: "£" },
+            "GEL": { name: "喬治亞拉里", flag: "🇬🇪", symbol: "₾" },
+            "GGP": { name: "根西鎊", flag: "🇬🇬", symbol: "£" },
+            "GHS": { name: "迦納塞地", flag: "🇬🇭", symbol: "₵" },
+            "GIP": { name: "直布羅陀鎊", flag: "🇬🇮", symbol: "£" },
+            "GMD": { name: "甘比亞達拉西", flag: "🇬🇲", symbol: "D" },
+            "GNF": { name: "幾內亞法郎", flag: "🇬🇳", symbol: "Fr" },
+            "GTQ": { name: "瓜地馬拉格查爾", flag: "🇬🇹", symbol: "Q" },
+            "GYD": { name: "蓋亞那元", flag: "🇬🇾", symbol: "$" },
+            "HKD": { name: "港幣", flag: "🇭🇰", symbol: "$" },
+            "HNL": { name: "宏都拉斯倫皮拉", flag: "🇭🇳", symbol: "L" },
+            "HRK": { name: "克羅埃西亞庫納", flag: "🇭🇷", symbol: "kn" },
+            "HTG": { name: "海地古德", flag: "🇭🇹", symbol: "G" },
+            "HUF": { name: "匈牙利福林", flag: "🇭🇺", symbol: "Ft" },
+            "IDR": { name: "印尼盾", flag: "🇮🇩", symbol: "Rp" },
+            "ILS": { name: "以色列謝克爾", flag: "🇮🇱", symbol: "₪" },
+            "IMP": { name: "曼島鎊", flag: "🇮🇲", symbol: "£" },
+            "INR": { name: "印度盧比", flag: "🇮🇳", symbol: "₹" },
+            "IQD": { name: "伊拉克第納爾", flag: "🇮🇶", symbol: "ع.د" },
+            "IRR": { name: "伊朗里亞爾", flag: "🇮🇷", symbol: "﷼" },
+            "ISK": { name: "冰島克朗", flag: "🇮🇸", symbol: "kr" },
+            "JEP": { name: "澤西鎊", flag: "🇯🇪", symbol: "£" },
+            "JMD": { name: "牙買加元", flag: "🇯🇲", symbol: "$" },
+            "JOD": { name: "約旦第納爾", flag: "🇯🇴", symbol: "د.ا" },
+            "JPY": { name: "日圓", flag: "🇯🇵", symbol: "¥" },
+            "KES": { name: "肯亞先令", flag: "🇰🇪", symbol: "Sh" },
+            "KGS": { name: "吉爾吉斯索姆", flag: "🇰🇬", symbol: "с" },
+            "KHR": { name: "柬埔寨瑞爾", flag: "🇰🇭", symbol: "៛" },
+            "KID": { name: "吉里巴斯元", flag: "🇰🇮", symbol: "$" },
+            "KMF": { name: "葛摩法郎", flag: "🇰🇲", symbol: "Fr" },
+            "KRW": { name: "韓元", flag: "🇰🇷", symbol: "₩" },
+            "KWD": { name: "科威特第納爾", flag: "🇰🇼", symbol: "د.ك" },
+            "KYD": { name: "開曼群島元", flag: "🇰🇾", symbol: "$" },
+            "KZT": { name: "哈薩克堅戈", flag: "🇰🇿", symbol: "₸" },
+            "LAK": { name: "寮國基普", flag: "🇱🇦", symbol: "₭" },
+            "LBP": { name: "黎巴嫩鎊", flag: "🇱🇧", symbol: "ل.ل" },
+            "LKR": { name: "斯里蘭卡盧比", flag: "🇱🇰", symbol: "Rs" },
+            "LRD": { name: "賴比瑞亞元", flag: "🇱🇷", symbol: "$" },
+            "LSL": { name: "賴索托洛蒂", flag: "🇱🇸", symbol: "L" },
+            "LYD": { name: "利比亞第納爾", flag: "🇱🇾", symbol: "ل.د" },
+            "MAD": { name: "摩洛哥迪拉姆", flag: "🇲🇦", symbol: "dh" },
+            "MDL": { name: "摩爾多瓦列伊", flag: "🇲🇩", symbol: "L" },
+            "MGA": { name: "馬達加斯加阿里亞里", flag: "🇲🇬", symbol: "Ar" },
+            "MKD": { name: "馬其頓代納爾", flag: "🇲🇰", symbol: "ден" },
+            "MMK": { name: "緬甸元", flag: "🇲🇲", symbol: "K" },
+            "MNT": { name: "蒙古圖格里克", flag: "🇲🇳", symbol: "₮" },
+            "MOP": { name: "澳門幣", flag: "🇲🇴", symbol: "P" },
+            "MRU": { name: "茅利塔尼亞烏吉亞", flag: "🇲🇷", symbol: "UM" },
+            "MUR": { name: "模里西斯盧比", flag: "🇲🇺", symbol: "₨" },
+            "MVR": { name: "馬爾地夫拉菲亞", flag: "🇲🇻", symbol: "Rf" },
+            "MWK": { name: "馬拉威克瓦查", flag: "🇲🇼", symbol: "MK" },
+            "MXN": { name: "墨西哥披索", flag: "🇲🇽", symbol: "$" },
+            "MYR": { name: "馬來幣", flag: "🇲🇾", symbol: "RM" },
+            "MZN": { name: "莫三比克梅蒂卡爾", flag: "🇲🇿", symbol: "MT" },
+            "NAD": { name: "納米比亞元", flag: "🇳🇦", symbol: "$" },
+            "NGN": { name: "奈及利亞奈拉", flag: "🇳🇬", symbol: "₦" },
+            "NIO": { name: "尼加拉瓜哥多華", flag: "🇳🇮", symbol: "C$" },
+            "NOK": { name: "挪威克朗", flag: "🇳🇴", symbol: "kr" },
+            "NPR": { name: "尼泊爾盧比", flag: "🇳🇵", symbol: "₨" },
+            "NZD": { name: "紐幣", flag: "🇳🇿", symbol: "$" },
+            "OMR": { name: "阿曼里亞爾", flag: "🇴🇲", symbol: "ر.ع." },
+            "PAB": { name: "巴拿馬巴波亞", flag: "🇵🇦", symbol: "B/." },
+            "PEN": { name: "秘魯索爾", flag: "🇵🇪", symbol: "S/" },
+            "PGK": { name: "巴布亞紐幾內亞基那", flag: "🇵🇬", symbol: "K" },
+            "PHP": { name: "菲律賓披索", flag: "🇵🇭", symbol: "₱" },
+            "PKR": { name: "巴基斯坦盧比", flag: "🇵🇰", symbol: "₨" },
+            "PLN": { name: "波蘭茲羅提", flag: "🇵🇱", symbol: "zł" },
+            "PYG": { name: "巴拉圭瓜拉尼", flag: "🇵🇾", symbol: "₲" },
+            "QAR": { name: "卡達里亞爾", flag: "🇶🇦", symbol: "ر.ق" },
+            "RON": { name: "羅馬尼亞列伊", flag: "🇷🇴", symbol: "lei" },
+            "RSD": { name: "塞爾維亞第納爾", flag: "🇷🇸", symbol: "дин." },
+            "RUB": { name: "俄羅斯盧布", flag: "🇷🇺", symbol: "₽" },
+            "RWF": { name: "盧安達法郎", flag: "🇷🇼", symbol: "Fr" },
+            "SAR": { name: "沙烏地里亞爾", flag: "🇸🇦", symbol: "ر.س" },
+            "SBD": { name: "索羅門群島元", flag: "🇸🇧", symbol: "$" },
+            "SCR": { name: "塞席爾盧比", flag: "🇸🇨", symbol: "₨" },
+            "SDG": { name: "蘇丹鎊", flag: "🇸🇩", symbol: "£" },
+            "SEK": { name: "瑞典克朗", flag: "🇸🇪", symbol: "kr" },
+            "SGD": { name: "新幣", flag: "🇸🇬", symbol: "$" },
+            "SHP": { name: "聖赫勒拿鎊", flag: "🇸🇭", symbol: "£" },
+            "SLE": { name: "獅子山利昂", flag: "🇸🇱", symbol: "Le" },
+            "SLL": { name: "獅子山利昂", flag: "🇸🇱", symbol: "Le" },
+            "SOS": { name: "索馬利亞先令", flag: "🇸🇴", symbol: "Sh" },
+            "SRD": { name: "蘇利南元", flag: "🇸🇷", symbol: "$" },
+            "SSP": { name: "南蘇丹鎊", flag: "🇸🇸", symbol: "£" },
+            "STN": { name: "聖多美多布拉", flag: "🇸🇹", symbol: "Db" },
+            "SYP": { name: "敘利亞鎊", flag: "🇸🇾", symbol: "£" },
+            "SZL": { name: "史瓦帝尼里蘭吉尼", flag: "🇸🇿", symbol: "L" },
+            "THB": { name: "泰銖", flag: "🇹🇭", symbol: "฿" },
+            "TJS": { name: "塔吉克索莫尼", flag: "🇹🇯", symbol: "ЅМ" },
+            "TMT": { name: "土庫曼馬納特", flag: "🇹🇲", symbol: "m" },
+            "TND": { name: "突尼西亞第納爾", flag: "🇹🇳", symbol: "د.ت" },
+            "TOP": { name: "東加潘加", flag: "🇹🇴", symbol: "T$" },
+            "TRY": { name: "土耳其里拉", flag: "🇹🇷", symbol: "₺" },
+            "TTD": { name: "千里達及托巴哥元", flag: "🇹🇹", symbol: "$" },
+            "TVD": { name: "吐瓦魯元", flag: "🇹🇻", symbol: "$" },
+            "TWD": { name: "新台幣", flag: "🇹🇼", symbol: "$" },
+            "TZS": { name: "坦尚尼亞先令", flag: "🇹🇿", symbol: "Sh" },
+            "UAH": { name: "烏克蘭格里夫納", flag: "🇺🇦", symbol: "₴" },
+            "UGX": { name: "烏干達先令", flag: "🇺🇬", symbol: "Sh" },
+            "USD": { name: "美元", flag: "🇺🇸", symbol: "$" },
+            "UYU": { name: "烏拉圭披索", flag: "🇺🇾", symbol: "$" },
+            "UZS": { name: "烏茲別克索姆", flag: "🇺🇿", symbol: "so'm" },
+            "VES": { name: "委內瑞拉玻利瓦", flag: "🇻🇪", symbol: "Bs." },
+            "VND": { name: "越南盾", flag: "🇻🇳", symbol: "₫" },
+            "VUV": { name: "萬那杜瓦圖", flag: "🇻🇺", symbol: "Vt" },
+            "WST": { name: "薩摩亞塔拉", flag: "🇼🇸", symbol: "T" },
+            "XAF": { name: "中非法郎", flag: "🇨🇲", symbol: "Fr" },
+            "XCD": { name: "東加勒比元", flag: "🇦🇬", symbol: "$" },
+            "XCG": { name: "加勒比盾", flag: "🇨🇼", symbol: "ƒ" },
+            "XDR": { name: "特別提款權", flag: "🌐", symbol: "SDR" },
+            "XOF": { name: "西非法郎", flag: "🇸🇳", symbol: "Fr" },
+            "XPF": { name: "太平洋法郎", flag: "🇵🇫", symbol: "Fr" },
+            "YER": { name: "葉門里亞爾", flag: "🇾🇪", symbol: "﷼" },
+            "ZAR": { name: "南非蘭特", flag: "🇿🇦", symbol: "R" },
+            "ZMW": { name: "尚比亞克瓦查", flag: "🇿🇲", symbol: "ZK" },
+            "ZWG": { name: "辛巴威金", flag: "🇿🇼", symbol: "ZiG" },
+            "ZWL": { name: "辛巴威元", flag: "🇿🇼", symbol: "$" }
+        };
 
         createApp({
             setup() {
                 // Constants
-                const STORAGE_KEY = 'coinflow_prefs_v1';
-                
-                // Metadata Dictionary
-                const currencyMeta = {
-                    "TWD": { name: "新台幣", flag: "🇹🇼", symbol: "$" },
-                    "USD": { name: "美元", flag: "🇺🇸", symbol: "$" },
-                    "JPY": { name: "日圓", flag: "🇯🇵", symbol: "¥" },
-                    "KRW": { name: "韓元", flag: "🇰🇷", symbol: "₩" },
-                    "CNY": { name: "人民幣", flag: "🇨🇳", symbol: "¥" },
-                    "HKD": { name: "港幣", flag: "🇭🇰", symbol: "$" },
-                    "THB": { name: "泰銖", flag: "🇹🇭", symbol: "฿" },
-                    "SGD": { name: "新幣", flag: "🇸🇬", symbol: "$" },
-                    "VND": { name: "越南盾", flag: "🇻🇳", symbol: "₫" },
-                    "MYR": { name: "馬來幣", flag: "🇲🇾", symbol: "RM" },
-                    "PHP": { name: "菲律賓披索", flag: "🇵🇭", symbol: "₱" },
-                    "IDR": { name: "印尼盾", flag: "🇮🇩", symbol: "Rp" },
-                    "EUR": { name: "歐元", flag: "🇪🇺", symbol: "€" },
-                    "GBP": { name: "英鎊", flag: "🇬🇧", symbol: "£" },
-                    "CHF": { name: "瑞士法郎", flag: "🇨🇭", symbol: "Fr" },
-                    "SEK": { name: "瑞典克朗", flag: "🇸🇪", symbol: "kr" },
-                    "CAD": { name: "加幣", flag: "🇨🇦", symbol: "$" },
-                    "AUD": { name: "澳幣", flag: "🇦🇺", symbol: "$" },
-                    "NZD": { name: "紐幣", flag: "🇳🇿", symbol: "$" },
-                    "MXN": { name: "墨西哥披索", flag: "🇲🇽", symbol: "$" },
-                    "BRL": { name: "巴西雷亞爾", flag: "🇧🇷", symbol: "R$" },
-                    "INR": { name: "印度盧比", flag: "🇮🇳", symbol: "₹" },
-                    "RUB": { name: "俄羅斯盧布", flag: "🇷🇺", symbol: "₽" },
-                    "TRY": { name: "土耳其里拉", flag: "🇹🇷", symbol: "₺" },
-                    "ZAR": { name: "南非蘭特", flag: "🇿🇦", symbol: "R" }
-                };
+                const STORAGE_KEY = 'wayfarer_prefs_v1';
+                const MAX_HISTORY_ITEMS = 20;
 
                 // State
                 const rates = ref({});
@@ -352,9 +470,25 @@
                 const history = ref([]);
                 const confirmDelete = ref(false);
 
-                // --- Methods ---
+                // Delete Confirmation Logic
+                const deleteConfirmIndex = ref(null);
+                let deleteResetTimer = null;
 
-                // 1. Fetch & Merge Logic
+                const triggerDelete = (index) => {
+                    if (deleteConfirmIndex.value === index) {
+                        removeTarget(index);
+                        deleteConfirmIndex.value = null;
+                        if (deleteResetTimer) clearTimeout(deleteResetTimer);
+                    } else {
+                        deleteConfirmIndex.value = index;
+                        if (deleteResetTimer) clearTimeout(deleteResetTimer);
+                        deleteResetTimer = setTimeout(() => {
+                            deleteConfirmIndex.value = null;
+                        }, 3000);
+                    }
+                };
+
+                // Methods
                 const fetchRates = async () => {
                     isLoading.value = true;
                     try {
@@ -364,7 +498,6 @@
                         const data = await res.json();
                         
                         const newRates = {};
-                        
                         if (data.base) {
                             const baseMeta = currencyMeta[data.base] || { name: data.base, flag: '🌐', symbol: '$' };
                             newRates[data.base] = { rate: 1, ...baseMeta };
@@ -384,6 +517,7 @@
                         Object.keys(currencyMeta).forEach(k => {
                             mock[k] = { rate: Math.random() * 100, ...currencyMeta[k] };
                         });
+                        // Basic fallback rates for demo
                         if(mock['TWD']) mock['TWD'].rate = 32.5;
                         if(mock['USD']) mock['USD'].rate = 1;
                         if(mock['JPY']) mock['JPY'].rate = 150;
@@ -395,7 +529,6 @@
                     }
                 };
 
-                // Preferences
                 const savePrefs = () => {
                     const prefs = {
                         source: sourceCurrency.value,
@@ -424,16 +557,17 @@
                     } catch (e) { console.error("Prefs load error", e); }
                 };
 
-                // Watchers
                 watch([sourceCurrency, targetCurrencies, isDarkMode, history], savePrefs, { deep: true });
 
-                // UI Helpers
                 const toggleTheme = () => { isDarkMode.value = !isDarkMode.value; updateThemeClass(); };
                 const updateThemeClass = () => { if(isDarkMode.value) document.documentElement.classList.add('dark'); else document.documentElement.classList.remove('dark'); };
                 const getFlag = (code) => rates.value[code]?.flag || '🌐';
                 const getRate = (code) => rates.value[code]?.rate || 1;
                 const canUndo = computed(() => undoStack.value.length > 0);
                 const currencyList = computed(() => Object.keys(rates.value).sort());
+                const sourceFlag = computed(() => getFlag(sourceCurrency.value));
+                const sourceName = computed(() => rates.value[sourceCurrency.value]?.name);
+                const hasHistory = computed(() => history.value.length > 0);
                 
                 const filteredCurrencies = computed(() => {
                     const q = searchQuery.value.toLowerCase();
@@ -465,7 +599,15 @@
                     return currency(res, { symbol: '', precision: 2 }).format();
                 };
 
-                // Keypad Actions
+                const targetListDisplay = computed(() => {
+                    return targetCurrencies.value.map(code => ({
+                        code,
+                        flag: getFlag(code),
+                        rateDisplay: (getRate(code) / getRate(sourceCurrency.value)).toFixed(3),
+                        valueDisplay: calculateTargetValue(code)
+                    }));
+                });
+
                 const handleAC = () => { saveState(); if (!inputDisplay.value || inputDisplay.value === '0') { expressionAccumulator.value = ''; shouldResetScreen.value = false; } inputDisplay.value = ''; };
                 const isAC = computed(() => !inputDisplay.value || inputDisplay.value === '0');
                 const backspace = () => { saveState(); if(!shouldResetScreen.value && inputDisplay.value.length > 0) inputDisplay.value = inputDisplay.value.slice(0, -1); };
@@ -473,24 +615,59 @@
                 const getOp = (op) => op==='*'?'×':op==='/'?'÷':op;
                 const appendOperator = (op) => { saveState(); const s = getOp(op); if(!inputDisplay.value && expressionAccumulator.value) { expressionAccumulator.value = expressionAccumulator.value.trimEnd().slice(0, -1).trimEnd() + ` ${s} `; return; } expressionAccumulator.value += `${inputDisplay.value} ${s} `; inputDisplay.value = ''; shouldResetScreen.value = false; };
                 const applyPercentage = () => { saveState(); const v = parseFloat(inputDisplay.value); if(isNaN(v)) return; const expr = expressionAccumulator.value.trim(); let nv = 0; if(expr.endsWith('+')||expr.endsWith('-')) { const lastOp = Math.max(expr.lastIndexOf('+'), expr.lastIndexOf('-')); try { const prev = math.evaluate(expr.substring(0, lastOp).replace(/×/g,'*').replace(/÷/g,'/')); nv = prev * (v/100); } catch(e){} } else { nv = v/100; } inputDisplay.value = parseFloat(nv.toFixed(6)).toString(); };
-                const calculateFinal = () => { saveState(); const expr = expressionAccumulator.value + inputDisplay.value; try { const res = math.evaluate(expr.replace(/×/g,'*').replace(/÷/g,'/')); addToHistory(expr, res); expressionAccumulator.value=''; inputDisplay.value=parseFloat(res.toFixed(6)).toString(); shouldResetScreen.value=true; } catch(e){} };
+                
+                const addToHistory = (f, r) => { history.value.unshift({ time: new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}), formula: f, result: r, resultFormatted: currency(r, {symbol:'', precision:2}).format() }); if(history.value.length > MAX_HISTORY_ITEMS) history.value.pop(); };
+
+                const calculateFinal = () => {
+                    saveState();
+                    const finalExpr = expressionAccumulator.value + inputDisplay.value;
+                    try {
+                        const res = math.evaluate(finalExpr.replace(/×/g, '*').replace(/÷/g, '/'));
+                        addToHistory(finalExpr, res);
+                        expressionAccumulator.value = '';
+                        inputDisplay.value = parseFloat(res.toFixed(6)).toString();
+                        shouldResetScreen.value = true;
+                    } catch(e) {}
+                };
+
                 const clear = () => { saveState(); inputDisplay.value=''; expressionAccumulator.value=''; shouldResetScreen.value=false; };
 
-                // Modals
                 const openModal = (m) => { modalMode.value = m; searchQuery.value = ''; isModalOpen.value = true; nextTick(() => searchInput.value?.focus()); };
+                
+                const openSourceSelector = () => openModal('source');
+                const openAddSelector = () => openModal('add');
+                const openInfo = () => isInfoOpen.value = true;
+                const openHistory = () => isHistoryOpen.value = true;
+
                 const openAddModal = () => openModal('add');
                 const selectCurrency = (c) => { 
                     if(modalMode.value === 'source') { if(targetCurrencies.value.includes(c)) targetCurrencies.value[targetCurrencies.value.indexOf(c)] = sourceCurrency.value; sourceCurrency.value = c; inputDisplay.value=''; expressionAccumulator.value=''; }
                     else if(c !== sourceCurrency.value && !targetCurrencies.value.includes(c)) targetCurrencies.value.push(c);
                     isModalOpen.value = false; 
                 };
-                const removeTarget = (i) => targetCurrencies.value.splice(i, 1);
-                const swapToSource = (i) => { saveState(); const newSrc = targetCurrencies.value[i]; const newVal = calculateTargetValue(newSrc).replace(/,/g,''); targetCurrencies.value[i] = sourceCurrency.value; sourceCurrency.value = newSrc; inputDisplay.value = newVal; expressionAccumulator.value=''; shouldResetScreen.value=true; };
+                const removeTarget = (i) => {
+                    targetCurrencies.value.splice(i, 1);
+                };
+                const swapToSource = (i) => { 
+                    if (deleteConfirmIndex.value !== null) {
+                        deleteConfirmIndex.value = null;
+                        if (deleteResetTimer) clearTimeout(deleteResetTimer);
+                        return;
+                    }
+                    saveState(); const newSrc = targetCurrencies.value[i]; const newVal = calculateTargetValue(newSrc).replace(/,/g,''); targetCurrencies.value[i] = sourceCurrency.value; sourceCurrency.value = newSrc; inputDisplay.value = newVal; expressionAccumulator.value=''; shouldResetScreen.value=true; 
+                };
 
-                // History
-                const addToHistory = (f, r) => { history.value.unshift({ time: new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}), formula: f, result: r, resultFormatted: currency(r, {symbol:'', precision:2}).format() }); if(history.value.length>50) history.value.pop(); };
                 const handleClearHistory = () => { if(confirmDelete.value){ history.value=[]; confirmDelete.value=false; } else { confirmDelete.value=true; setTimeout(()=>confirmDelete.value=false, 3000); }};
                 const useHistoryItem = (r) => { saveState(); inputDisplay.value=String(r); isHistoryOpen.value=false; shouldResetScreen.value=true; expressionAccumulator.value=''; };
+                
+                const triggerToast = (msg) => { toastMessage.value = msg; showToast.value = true; setTimeout(() => showToast.value = false, 2000); };
+                const copyResult = () => {
+                    const val = realTimeResultDisplay.value;
+                    if(val === '0' && !inputDisplay.value) return; 
+                    navigator.clipboard.writeText(val).then(() => {
+                        triggerToast('已複製');
+                    }).catch(err => console.error(err));
+                };
 
                 onMounted(() => { fetchRates(); });
 
@@ -500,7 +677,10 @@
                     isModalOpen, isInfoOpen, isHistoryOpen, searchQuery, filteredCurrencies, searchInput,
                     history, confirmDelete, undo, canUndo, isAC,
                     openModal, openAddModal, selectCurrency, swapToSource, removeTarget, calculateTargetValue, getFlag, getRate,
-                    appendNumber, appendOperator, calculateFinal, clear, backspace, applyPercentage, handleAC, handleClearHistory, useHistoryItem
+                    appendNumber, appendOperator, calculateFinal, clear, backspace, applyPercentage, handleAC, handleClearHistory, useHistoryItem,
+                    openSourceSelector, openAddSelector, openInfo, openHistory, sourceFlag, sourceName, hasHistory, targetListDisplay,
+                    copyResult,
+                    deleteConfirmIndex, triggerDelete
                 };
             }
         }).mount('#app');
