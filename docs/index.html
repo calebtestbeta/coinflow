@@ -18,7 +18,8 @@
     <meta property="og:type" content="website">
     <meta property="og:title" content="WAYFARER CALCULATOR">
     <meta property="og:description" content="旅行、代購的好幫手！支援算式輸入、即時多國匯率轉換。">
-    <meta property="og:image" content="https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Travel%20and%20places/Money%20with%20Wings.png">
+    <!-- 更新 SEO 預覽圖片 -->
+    <meta property="og:image" content="https://calebtestbeta.github.io/coinflow/preview.png">
 
     <!-- Favicon -->
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='24' fill='%230ea5e9'/%3E%3Cpath d='M22 34 L38 74 L50 48 L62 74 L78 34' fill='none' stroke='white' stroke-width='8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
@@ -71,6 +72,9 @@
         .anim-list-leave-active { position: absolute; width: 100%; }
         
         .modal-backdrop { backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
+
+        .fade-enter-active, .fade-leave-active { transition: opacity 0.3s ease; }
+        .fade-enter-from, .fade-leave-to { opacity: 0; }
     </style>
 </head>
 <body :class="{'dark': isDarkMode}" class="bg-gray-50 text-gray-900 h-[100dvh] w-screen overflow-hidden flex justify-center transition-colors duration-300">
@@ -129,44 +133,57 @@
         </section>
 
         <!-- Target List -->
-        <section id="target-list-area" class="flex-grow min-h-0 overflow-y-auto px-4 py-2 space-y-2 relative">
-            <div class="pointer-events-none absolute inset-x-0 top-0 h-6 bg-gradient-to-b from-gray-50 to-transparent z-10 dark:from-dark-bg"></div>
-            <div class="flex items-center justify-between px-2 mb-1 opacity-50 relative z-0">
-                <span class="text-[10px] font-bold uppercase tracking-widest text-gray-400 dark:text-gray-600">Rates</span>
-                <button id="btn-add-currency" @click="openAddSelector" class="text-xs text-emerald-600 dark:text-emerald-500 font-medium flex items-center gap-1 effect-press">
-                    <i class="fa-solid fa-circle-plus"></i> 新增
+        <section id="target-list-area" class="flex-grow min-h-0 relative group">
+            
+            <transition name="fade">
+                <button v-if="canScrollUp" @click="scrollList('up')" class="absolute top-2 left-1/2 -translate-x-1/2 z-20 w-8 h-8 rounded-full bg-white/90 dark:bg-dark-card/90 shadow-md border border-gray-100 dark:border-gray-700 flex items-center justify-center text-emerald-500 hover:scale-110 transition-transform cursor-pointer backdrop-blur">
+                    <i class="fa-solid fa-chevron-up text-sm"></i>
                 </button>
-            </div>
-            <transition-group name="anim-list">
-                <div v-for="(item, index) in targetListDisplay" :key="item.code" class="sem-currency-row group flex items-center justify-between p-3 rounded-xl hover:bg-white dark:hover:bg-dark-card border border-transparent hover:border-gray-100 dark:hover:border-gray-800 transition-all duration-200 cursor-pointer relative z-0" @click="swapToSource(index)">
-                    <div class="flex items-center gap-3">
-                        <span class="text-xl rounded-full opacity-90 group-hover:opacity-100 transition-opacity">{{ item.flag }}</span>
-                        <div class="flex flex-col">
-                            <div class="flex items-baseline gap-2">
-                                <span class="font-bold text-gray-700 dark:text-gray-200 text-sm">{{ item.code }}</span>
-                                <span class="text-[10px] text-gray-400 dark:text-gray-600">1 {{ sourceCurrency }} = {{ item.rateDisplay }}</span>
+            </transition>
+
+            <div ref="listContainer" @scroll="handleListScroll" class="h-full overflow-y-auto px-4 py-2 space-y-2 no-scrollbar scroll-smooth">
+                <div class="flex items-center justify-between px-2 mb-1 opacity-50 relative z-0">
+                    <span class="text-[10px] font-bold uppercase tracking-widest text-gray-400 dark:text-gray-600">Rates</span>
+                    <button id="btn-add-currency" @click="openAddSelector" class="text-xs text-emerald-600 dark:text-emerald-500 font-medium flex items-center gap-1 effect-press">
+                        <i class="fa-solid fa-circle-plus"></i> 新增
+                    </button>
+                </div>
+                <transition-group name="anim-list">
+                    <div v-for="(item, index) in targetListDisplay" :key="item.code" class="sem-currency-row group/row flex items-center justify-between p-3 rounded-xl hover:bg-white dark:hover:bg-dark-card border border-transparent hover:border-gray-100 dark:hover:border-gray-800 transition-all duration-200 cursor-pointer relative z-0" @click="swapToSource(index)">
+                        <div class="flex items-center gap-3">
+                            <span class="text-xl rounded-full opacity-90 group-hover:opacity-100 transition-opacity">{{ item.flag }}</span>
+                            <div class="flex flex-col">
+                                <div class="flex items-baseline gap-2">
+                                    <span class="font-bold text-gray-700 dark:text-gray-200 text-sm">{{ item.code }}</span>
+                                    <span class="text-[10px] text-gray-400 dark:text-gray-600">1 {{ sourceCurrency }} = {{ item.rateDisplay }}</span>
+                                </div>
                             </div>
                         </div>
-                    </div>
-                    <div class="flex items-center gap-3">
-                        <div class="text-right">
-                            <div class="text-lg font-medium text-gray-800 dark:text-gray-100 tabular-nums tracking-tight">{{ item.valueDisplay }}</div>
+                        <div class="flex items-center gap-3">
+                            <div class="text-right">
+                                <div class="text-lg font-medium text-gray-800 dark:text-gray-100 tabular-nums tracking-tight">{{ item.valueDisplay }}</div>
+                            </div>
+                            <button 
+                                @click.stop="triggerDelete(index)" 
+                                class="sem-btn-delete h-8 rounded-full flex items-center justify-center transition-all duration-200 ease-out"
+                                :class="deleteConfirmIndex === index 
+                                    ? 'w-12 bg-red-500 text-white shadow-md' 
+                                    : 'w-8 bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-500 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20'"
+                            >
+                                <span v-if="deleteConfirmIndex === index" class="text-xs font-bold whitespace-nowrap">刪除</span>
+                                <i v-else class="fa-solid fa-minus text-[10px]"></i>
+                            </button>
                         </div>
-                        <button 
-                            @click.stop="triggerDelete(index)" 
-                            class="sem-btn-delete h-8 rounded-full flex items-center justify-center transition-all duration-200 ease-out"
-                            :class="deleteConfirmIndex === index 
-                                ? 'w-12 bg-red-500 text-white shadow-md' 
-                                : 'w-8 bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-500 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20'"
-                        >
-                            <span v-if="deleteConfirmIndex === index" class="text-xs font-bold whitespace-nowrap">刪除</span>
-                            <i v-else class="fa-solid fa-minus text-[10px]"></i>
-                        </button>
                     </div>
-                </div>
-            </transition-group>
-            <div class="pointer-events-none absolute inset-x-0 bottom-0 h-6 bg-gradient-to-t from-gray-50 to-transparent z-10 dark:from-dark-bg"></div>
-            <div class="h-4"></div>
+                </transition-group>
+                <div class="h-4"></div>
+            </div>
+
+            <transition name="fade">
+                <button v-if="canScrollDown" @click="scrollList('down')" class="absolute bottom-2 left-1/2 -translate-x-1/2 z-20 w-8 h-8 rounded-full bg-white/90 dark:bg-dark-card/90 shadow-md border border-gray-100 dark:border-gray-700 flex items-center justify-center text-emerald-500 hover:scale-110 transition-transform cursor-pointer backdrop-blur">
+                    <i class="fa-solid fa-chevron-down text-sm"></i>
+                </button>
+            </transition>
         </section>
 
         <!-- Keypad -->
@@ -218,7 +235,7 @@
                         <div class="text-xs text-gray-400 dark:text-dark-sub leading-relaxed border-t border-gray-100 dark:border-gray-800 pt-4">
                             <p class="mb-2"><strong class="text-gray-500 dark:text-gray-400">免責聲明：</strong></p><p>本應用程式提供之匯率資料僅供參考。實際交易匯率請以您的銀行、信用卡發卡機構或交易櫃檯當下公告之買賣匯率為準。</p>
                         </div>
-                        <div class="text-center text-[10px] text-gray-300 dark:text-gray-700 font-mono">v1.0.0</div>
+                        <div class="text-center text-[10px] text-gray-300 dark:text-gray-700 font-mono">v1.1.0</div>
                     </div>
                 </div>
             </div>
@@ -246,8 +263,12 @@
         <transition enter-active-class="transition duration-300 ease-out" enter-from-class="translate-y-full" enter-to-class="translate-y-0" leave-active-class="transition duration-200 ease-in" leave-from-class="translate-y-0" leave-to-class="translate-y-full">
             <div v-if="isHistoryOpen" id="modal-history" class="absolute inset-0 bg-gray-50 dark:bg-dark-bg z-50 flex flex-col pt-[env(safe-area-inset-top)]">
                 <div class="px-6 py-4 bg-white dark:bg-dark-card border-b border-gray-100 dark:border-gray-800 flex items-center justify-between shrink-0 shadow-sm">
+                    <!-- 交換位置：清除移到左邊 -->
                     <button @click="handleClearHistory" class="text-red-500 text-sm font-medium">{{ confirmDelete ? '確認' : '清除' }}</button>
+                    
                     <h2 class="font-bold text-lg text-gray-800 dark:text-white">歷史紀錄</h2>
+                    
+                    <!-- 交換位置：縮小(關閉)移到右邊 -->
                     <button @click="isHistoryOpen = false"><i class="fa-solid fa-chevron-down text-lg text-gray-500"></i></button>
                 </div>
                 <div class="flex-grow overflow-y-auto p-4 space-y-3">
@@ -265,6 +286,7 @@
     <script>
         const { createApp, ref, computed, onMounted, watch, nextTick, reactive } = Vue;
 
+        // Constants
         const AppConfig = {
             STORAGE_KEY: 'wayfarer_prefs_v1',
             MAX_HISTORY_ITEMS: 20
@@ -407,7 +429,6 @@
             "STN": { name: "聖多美多布拉", flag: "🇸🇹", symbol: "Db" },
             "SYP": { name: "敘利亞鎊", flag: "🇸🇾", symbol: "£" },
             "SZL": { name: "史瓦帝尼里蘭吉尼", flag: "🇸🇿", symbol: "L" },
-            "THB": { name: "泰銖", flag: "🇹🇭", symbol: "฿" },
             "TJS": { name: "塔吉克索莫尼", flag: "🇹🇯", symbol: "ЅМ" },
             "TMT": { name: "土庫曼馬納特", flag: "🇹🇲", symbol: "m" },
             "TND": { name: "突尼西亞第納爾", flag: "🇹🇳", symbol: "د.ت" },
@@ -441,10 +462,6 @@
 
         createApp({
             setup() {
-                // Constants
-                const STORAGE_KEY = 'wayfarer_prefs_v1';
-                const MAX_HISTORY_ITEMS = 20;
-
                 // State
                 const rates = ref({});
                 const lastUpdated = ref('Updating...');
@@ -453,8 +470,10 @@
                 const toastMessage = ref('');
                 const isDarkMode = ref(false);
                 
-                const sourceCurrency = ref('TWD');
-                const targetCurrencies = ref(['JPY', 'USD', 'KRW']);
+                // 調整預設值：主貨幣為 JPY (日圓)
+                const sourceCurrency = ref('JPY');
+                // 調整預設清單：TWD (台幣) 放第一位，接著 USD, KRW
+                const targetCurrencies = ref(['TWD', 'USD', 'KRW']);
                 
                 const inputDisplay = ref('');
                 const expressionAccumulator = ref('');
@@ -469,6 +488,11 @@
                 const searchInput = ref(null);
                 const history = ref([]);
                 const confirmDelete = ref(false);
+
+                // Scroll Logic Variables
+                const listContainer = ref(null);
+                const canScrollUp = ref(false);
+                const canScrollDown = ref(false);
 
                 // Delete Confirmation Logic
                 const deleteConfirmIndex = ref(null);
@@ -488,7 +512,8 @@
                     }
                 };
 
-                // Methods
+                // --- Methods ---
+
                 const fetchRates = async () => {
                     isLoading.value = true;
                     try {
@@ -498,6 +523,7 @@
                         const data = await res.json();
                         
                         const newRates = {};
+                        
                         if (data.base) {
                             const baseMeta = currencyMeta[data.base] || { name: data.base, flag: '🌐', symbol: '$' };
                             newRates[data.base] = { rate: 1, ...baseMeta };
@@ -517,7 +543,6 @@
                         Object.keys(currencyMeta).forEach(k => {
                             mock[k] = { rate: Math.random() * 100, ...currencyMeta[k] };
                         });
-                        // Basic fallback rates for demo
                         if(mock['TWD']) mock['TWD'].rate = 32.5;
                         if(mock['USD']) mock['USD'].rate = 1;
                         if(mock['JPY']) mock['JPY'].rate = 150;
@@ -526,6 +551,7 @@
                     } finally {
                         isLoading.value = false;
                         loadPrefs();
+                        nextTick(checkScroll); // Check scroll after load
                     }
                 };
 
@@ -536,11 +562,11 @@
                         darkMode: isDarkMode.value,
                         history: history.value
                     };
-                    localStorage.setItem(STORAGE_KEY, JSON.stringify(prefs));
+                    localStorage.setItem(AppConfig.STORAGE_KEY, JSON.stringify(prefs));
                 };
 
                 const loadPrefs = () => {
-                    const saved = localStorage.getItem(STORAGE_KEY);
+                    const saved = localStorage.getItem(AppConfig.STORAGE_KEY);
                     if (!saved) return;
                     try {
                         const prefs = JSON.parse(saved);
@@ -571,16 +597,20 @@
                 
                 const filteredCurrencies = computed(() => {
                     const q = searchQuery.value.toLowerCase();
-                    if (!q) return currencyList.value.map(code => ({ code, ...rates.value[code] }));
-                    return currencyList.value
-                        .filter(code => {
+                    let list = currencyList.value;
+                    if (q) {
+                        list = list.filter(code => {
                             const meta = rates.value[code];
-                            return code.toLowerCase().includes(q) || meta.name.includes(q);
-                        })
-                        .map(code => ({ code, ...rates.value[code] }));
+                            return code.toLowerCase().includes(q) || (meta.name && meta.name.includes(q));
+                        });
+                    }
+                    if (modalMode.value === 'add') {
+                        const selectedSet = new Set([sourceCurrency.value, ...targetCurrencies.value]);
+                        list = list.filter(code => !selectedSet.has(code));
+                    }
+                    return list.map(code => ({ code, ...rates.value[code] }));
                 });
 
-                // Calculation Logic
                 const saveState = () => { if(undoStack.value.length > 20) undoStack.value.shift(); undoStack.value.push({ inputDisplay: inputDisplay.value, expressionAccumulator: expressionAccumulator.value, shouldResetScreen: shouldResetScreen.value }); };
                 const undo = () => { if(undoStack.value.length === 0) return; const s = undoStack.value.pop(); inputDisplay.value = s.inputDisplay; expressionAccumulator.value = s.expressionAccumulator; shouldResetScreen.value = s.shouldResetScreen; };
                 const fullExpressionDisplay = computed(() => expressionAccumulator.value + (inputDisplay.value && !shouldResetScreen.value ? inputDisplay.value : ''));
@@ -616,7 +646,7 @@
                 const appendOperator = (op) => { saveState(); const s = getOp(op); if(!inputDisplay.value && expressionAccumulator.value) { expressionAccumulator.value = expressionAccumulator.value.trimEnd().slice(0, -1).trimEnd() + ` ${s} `; return; } expressionAccumulator.value += `${inputDisplay.value} ${s} `; inputDisplay.value = ''; shouldResetScreen.value = false; };
                 const applyPercentage = () => { saveState(); const v = parseFloat(inputDisplay.value); if(isNaN(v)) return; const expr = expressionAccumulator.value.trim(); let nv = 0; if(expr.endsWith('+')||expr.endsWith('-')) { const lastOp = Math.max(expr.lastIndexOf('+'), expr.lastIndexOf('-')); try { const prev = math.evaluate(expr.substring(0, lastOp).replace(/×/g,'*').replace(/÷/g,'/')); nv = prev * (v/100); } catch(e){} } else { nv = v/100; } inputDisplay.value = parseFloat(nv.toFixed(6)).toString(); };
                 
-                const addToHistory = (f, r) => { history.value.unshift({ time: new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}), formula: f, result: r, resultFormatted: currency(r, {symbol:'', precision:2}).format() }); if(history.value.length > MAX_HISTORY_ITEMS) history.value.pop(); };
+                const addToHistory = (f, r) => { history.value.unshift({ time: new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}), formula: f, result: r, resultFormatted: currency(r, {symbol:'', precision:2}).format() }); if(history.value.length>50) history.value.pop(); };
 
                 const calculateFinal = () => {
                     saveState();
@@ -669,7 +699,36 @@
                     }).catch(err => console.error(err));
                 };
 
-                onMounted(() => { fetchRates(); });
+                // Scroll Logic
+                const checkScroll = () => {
+                    const el = listContainer.value;
+                    if (!el) return;
+                    canScrollUp.value = el.scrollTop > 1;
+                    canScrollDown.value = el.scrollTop + el.clientHeight < el.scrollHeight - 1;
+                };
+
+                const handleListScroll = () => {
+                    checkScroll();
+                };
+
+                const scrollList = (direction) => {
+                    const el = listContainer.value;
+                    if (!el) return;
+                    const scrollAmount = el.clientHeight / 2;
+                    el.scrollBy({
+                        top: direction === 'up' ? -scrollAmount : scrollAmount,
+                        behavior: 'smooth'
+                    });
+                };
+
+                watch(targetCurrencies, () => {
+                    nextTick(checkScroll);
+                }, { deep: true });
+
+                onMounted(() => { 
+                    fetchRates();
+                    window.addEventListener('resize', checkScroll);
+                });
 
                 return {
                     rates, lastUpdated, isLoading, showToast, toastMessage, isDarkMode, toggleTheme,
@@ -680,7 +739,8 @@
                     appendNumber, appendOperator, calculateFinal, clear, backspace, applyPercentage, handleAC, handleClearHistory, useHistoryItem,
                     openSourceSelector, openAddSelector, openInfo, openHistory, sourceFlag, sourceName, hasHistory, targetListDisplay,
                     copyResult,
-                    deleteConfirmIndex, triggerDelete
+                    deleteConfirmIndex, triggerDelete,
+                    listContainer, canScrollUp, canScrollDown, scrollList, handleListScroll
                 };
             }
         }).mount('#app');
