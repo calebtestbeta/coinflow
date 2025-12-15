@@ -9,6 +9,7 @@ on:
 
 permissions:
   contents: write
+  issues: write  # 需要建立 Issue 的權限
 
 jobs:
   fetch-and-update:
@@ -20,54 +21,100 @@ jobs:
       - name: Create docs directory if not exists
         run: mkdir -p docs
 
-      - name: Fetch Data from API
+      - name: Fetch Rates with Fallback
         id: fetch
         run: |
-          # 使用 curl 下載資料到暫存檔 temp_rates.json
-          # 改用 open.er-api.com，因為它支援 TWD (台灣) 以及更多亞洲貨幣
-          curl -f -s "https://open.er-api.com/v6/latest/USD" > temp_rates.json
-          echo "Download complete."
+          # API 1: open.er-api.com（當前使用）
+          echo "嘗試 API 1: open.er-api.com..."
+          if curl -f -s --max-time 10 --retry 2 --retry-delay 2 \
+            "https://open.er-api.com/v6/latest/USD" > temp_rates.json; then
 
-      - name: Validate JSON (Parsing Check)
-        id: validate
-        run: |
-          # 檢查下載下來的檔案是不是合法的 JSON
-          if jq -e . temp_rates.json >/dev/null 2>&1; then
-            echo "JSON validation passed."
-          else
-            echo "Error: Downloaded file is not valid JSON."
-            cat temp_rates.json
-            exit 1 
+            if jq -e '.base_code and .rates' temp_rates.json >/dev/null 2>&1; then
+              echo "✅ API 1 成功"
+              echo "source=open.er-api.com" >> $GITHUB_OUTPUT
+              echo "format=openexchange" >> $GITHUB_OUTPUT
+              exit 0
+            fi
           fi
 
-      - name: Process and Save Data
+          # API 2: fawazahmed0 CDN（備援）
+          echo "API 1 失敗，嘗試 API 2: fawazahmed0 CDN..."
+          if curl -f -s --max-time 10 --retry 2 --retry-delay 2 \
+            "https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/usd.json" > temp_rates.json; then
+
+            if jq -e '.date and .usd' temp_rates.json >/dev/null 2>&1; then
+              echo "✅ API 2 成功"
+              echo "source=fawazahmed0" >> $GITHUB_OUTPUT
+              echo "format=fawaz" >> $GITHUB_OUTPUT
+              exit 0
+            fi
+          fi
+
+          # 所有 API 都失敗
+          echo "❌ 所有 API 都失敗"
+          exit 1
+
+      - name: Transform Data
+        if: success()
         run: |
-          # 格式化並覆蓋正式檔案 (這裡才寫入 docs/rates.json)
-          # 使用 jq 轉換欄位名稱以符合我們 App 的需求：
-          # 1. .base_code -> .base
-          # 2. .time_last_update_utc -> .date (擷取前 16 個字元當作日期顯示)
-          # 3. .rates -> .rates (確保包含 TWD)
-          cat temp_rates.json | jq '{base: .base_code, date: .time_last_update_utc[0:16], rates: .rates}' > docs/rates.json
-          
+          source=${{ steps.fetch.outputs.source }}
+          format=${{ steps.fetch.outputs.format }}
+
+          if [[ "$format" == "openexchange" ]]; then
+            # open.er-api.com 格式轉換
+            cat temp_rates.json | jq '{
+              base: .base_code,
+              date: .time_last_update_utc[0:16],
+              rates: .rates
+            }' > docs/rates.json
+
+          elif [[ "$format" == "fawaz" ]]; then
+            # fawazahmed0 格式轉換（需要將 {usd: {...}} 轉為 {rates: {...}}）
+            cat temp_rates.json | jq '{
+              base: "USD",
+              date: .date,
+              rates: (.usd | to_entries | map({(.key | ascii_upcase): .value}) | add)
+            }' > docs/rates.json
+          fi
+
           rm temp_rates.json
-          
-          # 確認輸出的內容包含 TWD
-          echo "Checking for TWD..."
-          grep -o "TWD" docs/rates.json || echo "Warning: TWD not found in response"
-          
+
+          # 驗證 TWD 存在
+          if grep -q "TWD" docs/rates.json; then
+            echo "✅ TWD 已確認存在"
+          else
+            echo "⚠️ 警告：TWD 不在資料中"
+          fi
+
+          # 顯示前 10 行以供檢查
           head -n 10 docs/rates.json
 
       - name: Commit and Push
+        if: success()
         run: |
-          git config --global user.name "CoinFlow Bot"
+          git config --global user.name "Coinflow Bot"
           git config --global user.email "actions@github.com"
-          
+
           # 檢查是否有變更
           if [[ -n $(git status -s docs/rates.json) ]]; then
             git add docs/rates.json
-            git commit -m "Update exchange rates data (Added TWD support) [skip ci]"
+            git commit -m "Update exchange rates (Source: ${{ steps.fetch.outputs.source }}) [skip ci]"
             git push
-            echo "Rates updated successfully."
+            echo "✅ 匯率已更新並推送"
           else
-            echo "No changes in exchange rates."
+            echo "ℹ️ 匯率無變化"
           fi
+
+      - name: Create Issue on Failure
+        if: failure()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const now = new Date().toISOString();
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `⚠️ 匯率更新失敗 (${now})`,
+              body: `所有 API 來源都失敗了，請檢查：\n\n- open.er-api.com\n- fawazahmed0 CDN\n\n時間：${now}`,
+              labels: ['bug', 'automated', 'urgent']
+            });

@@ -235,7 +235,7 @@
                         <div class="text-xs text-gray-400 dark:text-dark-sub leading-relaxed border-t border-gray-100 dark:border-gray-800 pt-4">
                             <p class="mb-2"><strong class="text-gray-500 dark:text-gray-400">免責聲明：</strong></p><p>本應用程式提供之匯率資料僅供參考。實際交易匯率請以您的銀行、信用卡發卡機構或交易櫃檯當下公告之買賣匯率為準。</p>
                         </div>
-                        <div class="text-center text-[10px] text-gray-300 dark:text-gray-700 font-mono">v1.1.0</div>
+                        <div class="text-center text-[10px] text-gray-300 dark:text-gray-700 font-mono">v1.2.0</div>
                     </div>
                 </div>
             </div>
@@ -462,6 +462,9 @@
 
         createApp({
             setup() {
+                // Constants
+                const CACHE_KEY = 'wayfarer_rates_cache_v1';
+
                 // State
                 const rates = ref({});
                 const lastUpdated = ref('Updating...');
@@ -537,17 +540,59 @@
                         rates.value = newRates;
                         lastUpdated.value = data.date || new Date().toLocaleDateString();
 
+                        // ✅ 新增：儲存到 localStorage
+                        try {
+                            localStorage.setItem(CACHE_KEY, JSON.stringify({
+                                rates: newRates,
+                                date: data.date || new Date().toLocaleDateString(),
+                                timestamp: Date.now()
+                            }));
+                            console.log('匯率已快取到 localStorage');
+                        } catch (err) {
+                            console.warn('無法儲存快取', err);
+                        }
+
                     } catch (e) {
-                        console.warn("Fetch failed, using mock data for demo", e);
-                        const mock = {};
-                        Object.keys(currencyMeta).forEach(k => {
-                            mock[k] = { rate: Math.random() * 100, ...currencyMeta[k] };
-                        });
-                        if(mock['TWD']) mock['TWD'].rate = 32.5;
-                        if(mock['USD']) mock['USD'].rate = 1;
-                        if(mock['JPY']) mock['JPY'].rate = 150;
-                        rates.value = mock;
-                        lastUpdated.value = "Demo Mode";
+                        console.warn("Fetch failed, trying fallbacks", e);
+
+                        // 1. 嘗試 localStorage 快取
+                        const cached = localStorage.getItem(CACHE_KEY);
+                        if (cached) {
+                            try {
+                                const cachedData = JSON.parse(cached);
+                                const age = Date.now() - (cachedData.timestamp || 0);
+
+                                // 快取小於 7 天才使用
+                                if (age < 7 * 24 * 60 * 60 * 1000) {
+                                    rates.value = cachedData.rates;
+                                    lastUpdated.value = `${cachedData.date} (快取)`;
+                                    const daysAgo = Math.floor(age / (24 * 60 * 60 * 1000));
+                                    console.log(`使用快取資料，${daysAgo} 天前`);
+                                    return;
+                                }
+                            } catch (err) {
+                                console.warn("快取資料無效", err);
+                            }
+                        }
+
+                        // 2. 使用安全備援（僅主要貨幣的合理匯率）
+                        const safeFallback = {
+                            'USD': { rate: 1.0, ...currencyMeta['USD'] },
+                            'EUR': { rate: 0.85, ...currencyMeta['EUR'] },
+                            'GBP': { rate: 0.75, ...currencyMeta['GBP'] },
+                            'JPY': { rate: 150.0, ...currencyMeta['JPY'] },
+                            'CNY': { rate: 7.0, ...currencyMeta['CNY'] },
+                            'TWD': { rate: 32.0, ...currencyMeta['TWD'] },
+                            'HKD': { rate: 7.8, ...currencyMeta['HKD'] },
+                            'KRW': { rate: 1300.0, ...currencyMeta['KRW'] },
+                            'SGD': { rate: 1.3, ...currencyMeta['SGD'] },
+                            'AUD': { rate: 1.5, ...currencyMeta['AUD'] },
+                            'CAD': { rate: 1.35, ...currencyMeta['CAD'] },
+                            'CHF': { rate: 0.9, ...currencyMeta['CHF'] }
+                        };
+
+                        rates.value = safeFallback;
+                        lastUpdated.value = "離線模式 - 有限貨幣";
                     } finally {
                         isLoading.value = false;
                         loadPrefs();
