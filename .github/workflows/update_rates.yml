@@ -1,27 +1,62 @@
-name: Update Exchange Rates
+name: Deploy and Update Rates
 
 on:
+  push:
+    branches:
+      - main
   schedule:
     # 每天 UTC 時間 00:00 (台灣時間早上 08:00) 執行一次
     - cron: '0 0 * * *'
   # 允許手動按按鈕觸發 (方便測試)
   workflow_dispatch:
+    inputs:
+      update_rates:
+        description: '是否更新匯率？'
+        required: false
+        default: 'true'
+        type: choice
+        options:
+          - 'true'
+          - 'false'
 
 permissions:
   contents: write
-  issues: write  # 需要建立 Issue 的權限
+  issues: write    # 需要建立 Issue 的權限
+  pages: write     # 部署 GitHub Pages 的權限
+  id-token: write  # OIDC token 權限
 
 jobs:
-  fetch-and-update:
+  fetch-update-deploy:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
+      - name: Determine if should update rates
+        id: check
+        run: |
+          # Cron 觸發：一定更新
+          if [ "${{ github.event_name }}" == "schedule" ]; then
+            echo "should_update=true" >> $GITHUB_OUTPUT
+            echo "📅 定時觸發：將更新匯率"
+
+          # 手動觸發：看用戶選擇
+          elif [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            echo "should_update=${{ inputs.update_rates }}" >> $GITHUB_OUTPUT
+            echo "👆 手動觸發：更新匯率 = ${{ inputs.update_rates }}"
+
+          # Push 觸發：不更新
+          else
+            echo "should_update=false" >> $GITHUB_OUTPUT
+            echo "🔨 程式碼 Push：跳過匯率更新，僅部署"
+          fi
+
       - name: Create docs directory if not exists
+        if: steps.check.outputs.should_update == 'true'
         run: mkdir -p docs
 
       - name: Fetch Rates with Fallback
+        if: steps.check.outputs.should_update == 'true'
         id: fetch
         run: |
           # API 1: open.er-api.com（當前使用）
@@ -55,7 +90,7 @@ jobs:
           exit 1
 
       - name: Transform Data
-        if: success()
+        if: steps.check.outputs.should_update == 'true' && success()
         run: |
           source=${{ steps.fetch.outputs.source }}
           format=${{ steps.fetch.outputs.format }}
@@ -90,7 +125,7 @@ jobs:
           head -n 10 docs/rates.json
 
       - name: Commit and Push
-        if: success()
+        if: steps.check.outputs.should_update == 'true' && success()
         run: |
           git config --global user.name "Coinflow Bot"
           git config --global user.email "actions@github.com"
@@ -98,7 +133,7 @@ jobs:
           # 檢查是否有變更
           if [[ -n $(git status -s docs/rates.json) ]]; then
             git add docs/rates.json
-            git commit -m "Update exchange rates (Source: ${{ steps.fetch.outputs.source }}) [skip ci]"
+            git commit -m "Update exchange rates data (Source: ${{ steps.fetch.outputs.source }})"
             git push
             echo "✅ 匯率已更新並推送"
           else
@@ -106,7 +141,7 @@ jobs:
           fi
 
       - name: Create Issue on Failure
-        if: failure()
+        if: steps.check.outputs.should_update == 'true' && failure()
         uses: actions/github-script@v7
         with:
           script: |
@@ -118,3 +153,20 @@ jobs:
               body: `所有 API 來源都失敗了，請檢查：\n\n- open.er-api.com\n- fawazahmed0 CDN\n\n時間：${now}`,
               labels: ['bug', 'automated', 'urgent']
             });
+
+      # 部署到 GitHub Pages
+      # 邏輯：Push 觸發時總是部署；Rate 更新時只有成功才部署
+      - name: Setup Pages
+        if: success() || steps.check.outputs.should_update == 'false'
+        uses: actions/configure-pages@v4
+
+      - name: Upload artifact
+        if: success() || steps.check.outputs.should_update == 'false'
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: 'docs'
+
+      - name: Deploy to GitHub Pages
+        if: success() || steps.check.outputs.should_update == 'false'
+        id: deployment
+        uses: actions/deploy-pages@v4
