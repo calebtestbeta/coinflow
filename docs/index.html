@@ -617,7 +617,6 @@
                         lastUpdated.value = "離線模式 - 有限貨幣";
                     } finally {
                         isLoading.value = false;
-                        loadPrefs();
                         nextTick(checkScroll); // Check scroll after load
                     }
                 };
@@ -739,7 +738,7 @@
 
                 const toggleTheme = () => { isDarkMode.value = !isDarkMode.value; updateThemeClass(); };
                 const updateThemeClass = () => { if(isDarkMode.value) document.documentElement.classList.add('dark'); else document.documentElement.classList.remove('dark'); };
-                const getFlag = (code) => rates.value[code]?.flag || '🌐';
+                const getFlag = (code) => rates.value[code]?.flag || rates.value[code]?.icon || '🌐';
                 const getRate = (code) => rates.value[code]?.rate || 1;
                 const canUndo = computed(() => undoStack.value.length > 0);
                 const currencyList = computed(() => Object.keys(rates.value).sort());
@@ -912,6 +911,7 @@
                 onMounted(async () => {
                     await fetchRates();        // 載入法幣
                     await fetchCryptoRates();  // 載入加密貨幣
+                    loadPrefs();               // 載入使用者偏好（必須在兩個 fetch 之後）
                     window.addEventListener('resize', checkScroll);
                 });
 
