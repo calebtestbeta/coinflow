@@ -695,11 +695,11 @@
                             }
                         }
 
-                        // 備援數據（主要加密貨幣的合理價格）
+                        // 備援數據（格式：1 USD = X crypto）
                         const cryptoFallback = {
-                            'BTC': { rate: 88000, name: '比特幣', icon: '₿', symbol: 'BTC', type: 'crypto' },
-                            'ETH': { rate: 2975, name: '以太坊', icon: 'Ξ', symbol: 'ETH', type: 'crypto' },
-                            'USDT': { rate: 1.0, name: '泰達幣', icon: '₮', symbol: 'USDT', type: 'crypto' }
+                            'BTC': { rate: 0.00001136, name: '比特幣', icon: '₿', symbol: 'BTC', type: 'crypto' },  // ~88000 USD/BTC
+                            'ETH': { rate: 0.000336, name: '以太坊', icon: 'Ξ', symbol: 'ETH', type: 'crypto' },    // ~2975 USD/ETH
+                            'USDT': { rate: 1.0, name: '泰達幣', icon: '₮', symbol: 'USDT', type: 'crypto' }       // ~1 USD/USDT
                         };
 
                         cryptoRates.value = cryptoFallback;

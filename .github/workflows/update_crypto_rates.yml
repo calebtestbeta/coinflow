@@ -78,62 +78,68 @@ jobs:
           TIMESTAMP=$(date -u +"%a, %d %b %Y")
 
           if [[ "$SOURCE" == "coingecko" ]]; then
-            # CoinGecko 格式轉換（使用 // 運算符提供默認值，避免 null）
+            # CoinGecko 格式轉換
+            # 重要：將價格轉換為 "1 USD = X crypto" 格式（取倒數）以匹配法幣格式
             cat temp_crypto.json | jq --arg date "$TIMESTAMP" '{
               base: "USD",
               date: $date,
               rates: {
-                BTC: (.bitcoin.usd // 0),
-                ETH: (.ethereum.usd // 0),
-                USDT: (.tether.usd // 1),
-                BNB: (.binancecoin.usd // 0),
-                SOL: (.solana.usd // 0),
-                XRP: (.ripple.usd // 0),
-                USDC: (."usd-coin".usd // 1),
-                ADA: (.cardano.usd // 0),
-                DOGE: (.dogecoin.usd // 0),
-                TRX: (.tron.usd // 0),
-                MATIC: (."matic-network".usd // 0),
-                LTC: (.litecoin.usd // 0),
-                DOT: (.polkadot.usd // 0),
-                LINK: (.chainlink.usd // 0),
-                AVAX: (."avalanche-2".usd // 0)
+                BTC: (if (.bitcoin.usd // 0) > 0 then 1 / .bitcoin.usd else 0 end),
+                ETH: (if (.ethereum.usd // 0) > 0 then 1 / .ethereum.usd else 0 end),
+                USDT: (if (.tether.usd // 1) > 0 then 1 / .tether.usd else 1 end),
+                BNB: (if (.binancecoin.usd // 0) > 0 then 1 / .binancecoin.usd else 0 end),
+                SOL: (if (.solana.usd // 0) > 0 then 1 / .solana.usd else 0 end),
+                XRP: (if (.ripple.usd // 0) > 0 then 1 / .ripple.usd else 0 end),
+                USDC: (if (."usd-coin".usd // 1) > 0 then 1 / ."usd-coin".usd else 1 end),
+                ADA: (if (.cardano.usd // 0) > 0 then 1 / .cardano.usd else 0 end),
+                DOGE: (if (.dogecoin.usd // 0) > 0 then 1 / .dogecoin.usd else 0 end),
+                TRX: (if (.tron.usd // 0) > 0 then 1 / .tron.usd else 0 end),
+                MATIC: (if (."matic-network".usd // 0) > 0 then 1 / ."matic-network".usd else 0 end),
+                LTC: (if (.litecoin.usd // 0) > 0 then 1 / .litecoin.usd else 0 end),
+                DOT: (if (.polkadot.usd // 0) > 0 then 1 / .polkadot.usd else 0 end),
+                LINK: (if (.chainlink.usd // 0) > 0 then 1 / .chainlink.usd else 0 end),
+                AVAX: (if (."avalanche-2".usd // 0) > 0 then 1 / ."avalanche-2".usd else 0 end)
               }
             }' > docs/crypto-rates.json
 
           elif [[ "$SOURCE" == "cryptocompare" ]]; then
-            # CryptoCompare 格式（提供默認值避免 null）
+            # CryptoCompare 格式（轉換為 "1 USD = X crypto" 格式）
             cat temp_crypto.json | jq --arg date "$TIMESTAMP" '{
               base: "USD",
               date: $date,
               rates: {
-                BTC: (.BTC.USD // 0),
-                ETH: (.ETH.USD // 0),
-                USDT: (.USDT.USD // 1),
-                BNB: (.BNB.USD // 0),
-                SOL: (.SOL.USD // 0),
-                XRP: (.XRP.USD // 0),
-                USDC: (.USDC.USD // 1),
-                ADA: (.ADA.USD // 0),
-                DOGE: (.DOGE.USD // 0),
-                TRX: (.TRX.USD // 0),
-                MATIC: (.MATIC.USD // 0),
-                LTC: (.LTC.USD // 0),
-                DOT: (.DOT.USD // 0),
-                LINK: (.LINK.USD // 0),
-                AVAX: (.AVAX.USD // 0)
+                BTC: (if (.BTC.USD // 0) > 0 then 1 / .BTC.USD else 0 end),
+                ETH: (if (.ETH.USD // 0) > 0 then 1 / .ETH.USD else 0 end),
+                USDT: (if (.USDT.USD // 1) > 0 then 1 / .USDT.USD else 1 end),
+                BNB: (if (.BNB.USD // 0) > 0 then 1 / .BNB.USD else 0 end),
+                SOL: (if (.SOL.USD // 0) > 0 then 1 / .SOL.USD else 0 end),
+                XRP: (if (.XRP.USD // 0) > 0 then 1 / .XRP.USD else 0 end),
+                USDC: (if (.USDC.USD // 1) > 0 then 1 / .USDC.USD else 1 end),
+                ADA: (if (.ADA.USD // 0) > 0 then 1 / .ADA.USD else 0 end),
+                DOGE: (if (.DOGE.USD // 0) > 0 then 1 / .DOGE.USD else 0 end),
+                TRX: (if (.TRX.USD // 0) > 0 then 1 / .TRX.USD else 0 end),
+                MATIC: (if (.MATIC.USD // 0) > 0 then 1 / .MATIC.USD else 0 end),
+                LTC: (if (.LTC.USD // 0) > 0 then 1 / .LTC.USD else 0 end),
+                DOT: (if (.DOT.USD // 0) > 0 then 1 / .DOT.USD else 0 end),
+                LINK: (if (.LINK.USD // 0) > 0 then 1 / .LINK.USD else 0 end),
+                AVAX: (if (.AVAX.USD // 0) > 0 then 1 / .AVAX.USD else 0 end)
               }
             }' > docs/crypto-rates.json
 
           elif [[ "$SOURCE" == "binance" ]]; then
-            # Binance 格式（需要提取符號）
+            # Binance 格式（轉換為 "1 USD = X crypto" 格式）
             cat temp_crypto.json | jq --arg date "$TIMESTAMP" '{
               base: "USD",
               date: $date,
               rates: (
                 reduce .[] as $item ({};
                   . + {
-                    ($item.symbol | sub("USDT$"; "")): ($item.price | tonumber)
+                    ($item.symbol | sub("USDT$"; "")): (
+                      if (($item.price | tonumber) > 0)
+                      then 1 / ($item.price | tonumber)
+                      else 0
+                      end
+                    )
                   }
                 )
               )
