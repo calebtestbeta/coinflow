@@ -246,13 +246,32 @@
             <div v-if="isModalOpen" id="modal-selector" class="absolute inset-0 bg-white dark:bg-dark-bg z-50 flex flex-col pt-[env(safe-area-inset-top)]">
                 <div class="px-4 py-4 border-b border-gray-100 dark:border-gray-800 flex items-center gap-3 shrink-0">
                     <button @click="isModalOpen = false" class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500 transition"><i class="fa-solid fa-xmark text-lg"></i></button>
-                    <input ref="searchInput" v-model="searchQuery" type="text" placeholder="搜尋貨幣..." class="w-full bg-gray-100 dark:bg-dark-card dark:text-white rounded-xl px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                    <input ref="searchInput" v-model="searchQuery" type="text" placeholder="搜尋貨幣或加密貨幣..." class="w-full bg-gray-100 dark:bg-dark-card dark:text-white rounded-xl px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-emerald-500">
                 </div>
+
+                <!-- 切換按鈕 -->
+                <div class="flex gap-2 px-4 py-3 border-b border-gray-100 dark:border-gray-800">
+                    <button @click="currencyFilter = 'all'" :class="currencyFilter === 'all' ? 'bg-emerald-500 text-white' : 'bg-gray-100 dark:bg-dark-card text-gray-600 dark:text-gray-400'" class="flex-1 py-2 rounded-lg font-medium transition">
+                        全部
+                    </button>
+                    <button @click="currencyFilter = 'fiat'" :class="currencyFilter === 'fiat' ? 'bg-emerald-500 text-white' : 'bg-gray-100 dark:bg-dark-card text-gray-600 dark:text-gray-400'" class="flex-1 py-2 rounded-lg font-medium transition">
+                        法幣 💱
+                    </button>
+                    <button @click="currencyFilter = 'crypto'" :class="currencyFilter === 'crypto' ? 'bg-emerald-500 text-white' : 'bg-gray-100 dark:bg-dark-card text-gray-600 dark:text-gray-400'" class="flex-1 py-2 rounded-lg font-medium transition">
+                        加密貨幣 🪙
+                    </button>
+                </div>
+
                 <div class="flex-grow overflow-y-auto pb-20 p-2">
                     <button v-for="curr in filteredCurrencies" :key="curr.code" @click="selectCurrency(curr.code)" class="w-full px-4 py-3 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-dark-card rounded-xl transition">
                         <div class="flex items-center gap-4">
-                            <span class="text-3xl">{{ curr.flag }}</span>
-                            <span class="font-bold text-gray-800 dark:text-white text-lg">{{ curr.code }} - {{ curr.name }}</span>
+                            <!-- 法幣顯示國旗，加密貨幣顯示圖標 -->
+                            <span class="text-3xl">{{ curr.flag || curr.icon }}</span>
+                            <div class="flex flex-col items-start">
+                                <span class="font-bold text-gray-800 dark:text-white text-lg">{{ curr.code }} - {{ curr.name }}</span>
+                                <!-- 加密貨幣顯示英文名稱 -->
+                                <span v-if="curr.nameEn" class="text-xs text-gray-400 dark:text-gray-600">{{ curr.nameEn }}</span>
+                            </div>
                         </div>
                     </button>
                 </div>
@@ -489,6 +508,7 @@
                 const isHistoryOpen = ref(false);
                 const modalMode = ref('source');
                 const searchQuery = ref('');
+                const currencyFilter = ref('all');  // 'all', 'fiat', 'crypto'
                 const searchInput = ref(null);
                 const history = ref([]);
                 const confirmDelete = ref(false);
@@ -602,6 +622,91 @@
                     }
                 };
 
+                // 加密貨幣匯率載入
+                const cryptoRates = ref({});
+
+                const fetchCryptoRates = async () => {
+                    try {
+                        const res = await fetch('./crypto-rates.json');
+                        if (!res.ok) throw new Error("Failed to fetch crypto");
+
+                        const data = await res.json();
+
+                        // 載入加密貨幣元數據
+                        let cryptoMeta = {};
+                        try {
+                            const metaRes = await fetch('./crypto-currencies.json');
+                            if (metaRes.ok) {
+                                cryptoMeta = await metaRes.json();
+                            }
+                        } catch (e) {
+                            console.warn("Crypto metadata not found");
+                        }
+
+                        const newCryptoRates = {};
+
+                        for (const [code, rate] of Object.entries(data.rates)) {
+                            const meta = cryptoMeta[code] || {
+                                name: code,
+                                icon: '🪙',
+                                symbol: code
+                            };
+
+                            newCryptoRates[code] = {
+                                rate,
+                                ...meta,
+                                type: 'crypto'  // 標記為加密貨幣
+                            };
+                        }
+
+                        cryptoRates.value = newCryptoRates;
+
+                        // 合併到主 rates 物件（用於統一匯率計算）
+                        rates.value = { ...rates.value, ...newCryptoRates };
+
+                        // 快取加密貨幣數據
+                        try {
+                            localStorage.setItem('wayfarer_crypto_cache_v1', JSON.stringify({
+                                rates: newCryptoRates,
+                                timestamp: Date.now()
+                            }));
+                        } catch (err) {
+                            console.warn('無法儲存加密貨幣快取', err);
+                        }
+
+                    } catch (e) {
+                        console.warn("Crypto fetch failed, trying cache", e);
+
+                        // 嘗試快取（24 小時有效）
+                        const cached = localStorage.getItem('wayfarer_crypto_cache_v1');
+                        if (cached) {
+                            try {
+                                const cachedData = JSON.parse(cached);
+                                const age = Date.now() - (cachedData.timestamp || 0);
+
+                                if (age < 24 * 60 * 60 * 1000) {
+                                    cryptoRates.value = cachedData.rates;
+                                    rates.value = { ...rates.value, ...cachedData.rates };
+                                    console.log('使用加密貨幣快取');
+                                    return;
+                                }
+                            } catch (err) {
+                                console.warn("快取資料無效", err);
+                            }
+                        }
+
+                        // 備援數據（主要加密貨幣的合理價格）
+                        const cryptoFallback = {
+                            'BTC': { rate: 88000, name: '比特幣', icon: '₿', symbol: 'BTC', type: 'crypto' },
+                            'ETH': { rate: 2975, name: '以太坊', icon: 'Ξ', symbol: 'ETH', type: 'crypto' },
+                            'USDT': { rate: 1.0, name: '泰達幣', icon: '₮', symbol: 'USDT', type: 'crypto' }
+                        };
+
+                        cryptoRates.value = cryptoFallback;
+                        rates.value = { ...rates.value, ...cryptoFallback };
+                    }
+                };
+
                 const savePrefs = () => {
                     const prefs = {
                         source: sourceCurrency.value,
@@ -645,16 +750,30 @@
                 const filteredCurrencies = computed(() => {
                     const q = searchQuery.value.toLowerCase();
                     let list = currencyList.value;
+
+                    // 根據篩選器過濾
+                    if (currencyFilter.value === 'fiat') {
+                        list = list.filter(code => rates.value[code].type !== 'crypto');
+                    } else if (currencyFilter.value === 'crypto') {
+                        list = list.filter(code => rates.value[code].type === 'crypto');
+                    }
+
+                    // 搜尋過濾
                     if (q) {
                         list = list.filter(code => {
                             const meta = rates.value[code];
-                            return code.toLowerCase().includes(q) || (meta.name && meta.name.includes(q));
+                            return code.toLowerCase().includes(q) ||
+                                   (meta.name && meta.name.includes(q)) ||
+                                   (meta.nameEn && meta.nameEn.toLowerCase().includes(q));
                         });
                     }
+
+                    // 排除已選擇的貨幣
                     if (modalMode.value === 'add') {
                         const selectedSet = new Set([sourceCurrency.value, ...targetCurrencies.value]);
                         list = list.filter(code => !selectedSet.has(code));
                     }
+
                     return list.map(code => ({ code, ...rates.value[code] }));
                 });
 
@@ -672,8 +791,26 @@
                 const calculateTargetValue = (targetCode) => {
                     const amount = parseFloat(realTimeResultDisplay.value) || 0;
                     if (amount === 0) return '0';
+
                     const res = (amount / getRate(sourceCurrency.value)) * getRate(targetCode);
-                    return currency(res, { symbol: '', precision: 2 }).format();
+
+                    // 判斷是否為加密貨幣，決定精度
+                    const targetCurrency = rates.value[targetCode];
+                    const isCrypto = targetCurrency?.type === 'crypto';
+
+                    if (isCrypto) {
+                        // 加密貨幣：根據數值大小動態調整精度
+                        if (res >= 1000) {
+                            return currency(res, { symbol: '', precision: 2 }).format();
+                        } else if (res >= 1) {
+                            return currency(res, { symbol: '', precision: 4 }).format();
+                        } else {
+                            return currency(res, { symbol: '', precision: 8 }).format();
+                        }
+                    } else {
+                        // 法幣：2 位小數
+                        return currency(res, { symbol: '', precision: 2 }).format();
+                    }
                 };
 
                 const targetListDisplay = computed(() => {
@@ -772,15 +909,16 @@
                     nextTick(checkScroll);
                 }, { deep: true });
 
-                onMounted(() => { 
-                    fetchRates();
+                onMounted(async () => {
+                    await fetchRates();        // 載入法幣
+                    await fetchCryptoRates();  // 載入加密貨幣
                     window.addEventListener('resize', checkScroll);
                 });
 
                 return {
                     rates, lastUpdated, isLoading, showToast, toastMessage, isDarkMode, toggleTheme,
                     sourceCurrency, targetCurrencies, inputDisplay, expressionAccumulator, fullExpressionDisplay, realTimeResultDisplay,
-                    isModalOpen, isInfoOpen, isHistoryOpen, searchQuery, filteredCurrencies, searchInput,
+                    isModalOpen, isInfoOpen, isHistoryOpen, searchQuery, currencyFilter, filteredCurrencies, searchInput,
                     history, confirmDelete, undo, canUndo, isAC,
                     openModal, openAddModal, selectCurrency, swapToSource, removeTarget, calculateTargetValue, getFlag, getRate,
                     appendNumber, appendOperator, calculateFinal, clear, backspace, applyPercentage, handleAC, handleClearHistory, useHistoryItem,

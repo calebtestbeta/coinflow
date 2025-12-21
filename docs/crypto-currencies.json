@@ -1,0 +1,107 @@
+{
+  "BTC": {
+    "name": "比特幣",
+    "nameEn": "Bitcoin",
+    "icon": "₿",
+    "symbol": "BTC",
+    "coingeckoId": "bitcoin"
+  },
+  "ETH": {
+    "name": "以太坊",
+    "nameEn": "Ethereum",
+    "icon": "Ξ",
+    "symbol": "ETH",
+    "coingeckoId": "ethereum"
+  },
+  "USDT": {
+    "name": "泰達幣",
+    "nameEn": "Tether",
+    "icon": "₮",
+    "symbol": "USDT",
+    "coingeckoId": "tether"
+  },
+  "BNB": {
+    "name": "幣安幣",
+    "nameEn": "BNB",
+    "icon": "🔶",
+    "symbol": "BNB",
+    "coingeckoId": "binancecoin"
+  },
+  "SOL": {
+    "name": "索拉納",
+    "nameEn": "Solana",
+    "icon": "◎",
+    "symbol": "SOL",
+    "coingeckoId": "solana"
+  },
+  "XRP": {
+    "name": "瑞波幣",
+    "nameEn": "XRP",
+    "icon": "✕",
+    "symbol": "XRP",
+    "coingeckoId": "ripple"
+  },
+  "USDC": {
+    "name": "美元幣",
+    "nameEn": "USD Coin",
+    "icon": "$",
+    "symbol": "USDC",
+    "coingeckoId": "usd-coin"
+  },
+  "ADA": {
+    "name": "艾達幣",
+    "nameEn": "Cardano",
+    "icon": "₳",
+    "symbol": "ADA",
+    "coingeckoId": "cardano"
+  },
+  "DOGE": {
+    "name": "狗狗幣",
+    "nameEn": "Dogecoin",
+    "icon": "Ð",
+    "symbol": "DOGE",
+    "coingeckoId": "dogecoin"
+  },
+  "TRX": {
+    "name": "波場幣",
+    "nameEn": "TRON",
+    "icon": "⊕",
+    "symbol": "TRX",
+    "coingeckoId": "tron"
+  },
+  "MATIC": {
+    "name": "馬蹄鏈",
+    "nameEn": "Polygon",
+    "icon": "⬡",
+    "symbol": "MATIC",
+    "coingeckoId": "matic-network"
+  },
+  "LTC": {
+    "name": "萊特幣",
+    "nameEn": "Litecoin",
+    "icon": "Ł",
+    "symbol": "LTC",
+    "coingeckoId": "litecoin"
+  },
+  "DOT": {
+    "name": "波卡幣",
+    "nameEn": "Polkadot",
+    "icon": "●",
+    "symbol": "DOT",
+    "coingeckoId": "polkadot"
+  },
+  "LINK": {
+    "name": "鏈結幣",
+    "nameEn": "Chainlink",
+    "icon": "⬢",
+    "symbol": "LINK",
+    "coingeckoId": "chainlink"
+  },
+  "AVAX": {
+    "name": "雪崩幣",
+    "nameEn": "Avalanche",
+    "icon": "🔺",
+    "symbol": "AVAX",
+    "coingeckoId": "avalanche-2"
+  }
+}
