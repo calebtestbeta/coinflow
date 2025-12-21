@@ -78,50 +78,50 @@ jobs:
           TIMESTAMP=$(date -u +"%a, %d %b %Y")
 
           if [[ "$SOURCE" == "coingecko" ]]; then
-            # CoinGecko 格式轉換
+            # CoinGecko 格式轉換（使用 // 運算符提供默認值，避免 null）
             cat temp_crypto.json | jq --arg date "$TIMESTAMP" '{
               base: "USD",
               date: $date,
               rates: {
-                BTC: .bitcoin.usd,
-                ETH: .ethereum.usd,
-                USDT: .tether.usd,
-                BNB: .binancecoin.usd,
-                SOL: .solana.usd,
-                XRP: .ripple.usd,
-                USDC: ."usd-coin".usd,
-                ADA: .cardano.usd,
-                DOGE: .dogecoin.usd,
-                TRX: .tron.usd,
-                MATIC: ."matic-network".usd,
-                LTC: .litecoin.usd,
-                DOT: .polkadot.usd,
-                LINK: .chainlink.usd,
-                AVAX: ."avalanche-2".usd
+                BTC: (.bitcoin.usd // 0),
+                ETH: (.ethereum.usd // 0),
+                USDT: (.tether.usd // 1),
+                BNB: (.binancecoin.usd // 0),
+                SOL: (.solana.usd // 0),
+                XRP: (.ripple.usd // 0),
+                USDC: (."usd-coin".usd // 1),
+                ADA: (.cardano.usd // 0),
+                DOGE: (.dogecoin.usd // 0),
+                TRX: (.tron.usd // 0),
+                MATIC: (."matic-network".usd // 0),
+                LTC: (.litecoin.usd // 0),
+                DOT: (.polkadot.usd // 0),
+                LINK: (.chainlink.usd // 0),
+                AVAX: (."avalanche-2".usd // 0)
               }
             }' > docs/crypto-rates.json
 
           elif [[ "$SOURCE" == "cryptocompare" ]]; then
-            # CryptoCompare 格式（直接使用符號）
+            # CryptoCompare 格式（提供默認值避免 null）
             cat temp_crypto.json | jq --arg date "$TIMESTAMP" '{
               base: "USD",
               date: $date,
               rates: {
-                BTC: .BTC.USD,
-                ETH: .ETH.USD,
-                USDT: .USDT.USD,
-                BNB: .BNB.USD,
-                SOL: .SOL.USD,
-                XRP: .XRP.USD,
-                USDC: .USDC.USD,
-                ADA: .ADA.USD,
-                DOGE: .DOGE.USD,
-                TRX: .TRX.USD,
-                MATIC: .MATIC.USD,
-                LTC: .LTC.USD,
-                DOT: .DOT.USD,
-                LINK: .LINK.USD,
-                AVAX: .AVAX.USD
+                BTC: (.BTC.USD // 0),
+                ETH: (.ETH.USD // 0),
+                USDT: (.USDT.USD // 1),
+                BNB: (.BNB.USD // 0),
+                SOL: (.SOL.USD // 0),
+                XRP: (.XRP.USD // 0),
+                USDC: (.USDC.USD // 1),
+                ADA: (.ADA.USD // 0),
+                DOGE: (.DOGE.USD // 0),
+                TRX: (.TRX.USD // 0),
+                MATIC: (.MATIC.USD // 0),
+                LTC: (.LTC.USD // 0),
+                DOT: (.DOT.USD // 0),
+                LINK: (.LINK.USD // 0),
+                AVAX: (.AVAX.USD // 0)
               }
             }' > docs/crypto-rates.json
 
