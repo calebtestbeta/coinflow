@@ -124,6 +124,142 @@ jobs:
           # 顯示前 10 行以供檢查
           head -n 10 docs/rates.json
 
+      - name: Fetch Crypto Rates with Triple Fallback
+        if: steps.check.outputs.should_update == 'true'
+        id: fetch_crypto
+        run: |
+          CRYPTO_IDS="bitcoin,ethereum,tether,binancecoin,solana,ripple,usd-coin,cardano,dogecoin,tron,matic-network,litecoin,polkadot,chainlink,avalanche-2"
+
+          # API 1: CoinGecko Simple Price（主要來源）
+          echo "嘗試 CoinGecko API..."
+          if curl -f -s --max-time 15 --retry 2 --retry-delay 3 \
+            "https://api.coingecko.com/api/v3/simple/price?ids=${CRYPTO_IDS}&vs_currencies=usd" \
+            > temp_crypto.json; then
+
+            if jq -e '.bitcoin.usd' temp_crypto.json >/dev/null 2>&1; then
+              echo "✅ CoinGecko API 成功"
+              echo "crypto_source=coingecko" >> $GITHUB_OUTPUT
+              exit 0
+            fi
+          fi
+
+          # API 2: CryptoCompare（備援）
+          echo "CoinGecko 失敗，嘗試 CryptoCompare..."
+          SYMBOLS="BTC,ETH,USDT,BNB,SOL,XRP,USDC,ADA,DOGE,TRX,MATIC,LTC,DOT,LINK,AVAX"
+          if curl -f -s --max-time 15 --retry 2 --retry-delay 3 \
+            "https://min-api.cryptocompare.com/data/pricemulti?fsyms=${SYMBOLS}&tsyms=USD" \
+            > temp_crypto.json; then
+
+            if jq -e '.BTC.USD' temp_crypto.json >/dev/null 2>&1; then
+              echo "✅ CryptoCompare API 成功"
+              echo "crypto_source=cryptocompare" >> $GITHUB_OUTPUT
+              exit 0
+            fi
+          fi
+
+          # API 3: Binance（備援）
+          echo "CryptoCompare 失敗，嘗試 Binance..."
+          BINANCE_SYMBOLS='["BTCUSDT","ETHUSDT","BNBUSDT","SOLUSDT","XRPUSDT","ADAUSDT","DOGEUSDT","TRXUSDT","MATICUSDT","LTCUSDT","DOTUSDT","LINKUSDT","AVAXUSDT"]'
+          if curl -f -s --max-time 15 --retry 2 --retry-delay 3 \
+            "https://api.binance.com/api/v3/ticker/price?symbols=${BINANCE_SYMBOLS}" \
+            > temp_crypto.json; then
+
+            if jq -e '.[0].price' temp_crypto.json >/dev/null 2>&1; then
+              echo "✅ Binance API 成功"
+              echo "crypto_source=binance" >> $GITHUB_OUTPUT
+              exit 0
+            fi
+          fi
+
+          echo "❌ 所有加密貨幣 API 都失敗"
+          exit 1
+
+      - name: Transform Crypto Data
+        if: steps.check.outputs.should_update == 'true' && steps.fetch_crypto.outcome == 'success'
+        run: |
+          SOURCE="${{ steps.fetch_crypto.outputs.crypto_source }}"
+          TIMESTAMP=$(date -u +"%a, %d %b %Y")
+
+          if [[ "$SOURCE" == "coingecko" ]]; then
+            # CoinGecko 格式轉換（重要：取倒數以匹配法幣格式）
+            cat temp_crypto.json | jq --arg date "$TIMESTAMP" '{
+              base: "USD",
+              date: $date,
+              rates: {
+                BTC: (if (.bitcoin.usd // 0) > 0 then 1 / .bitcoin.usd else 0 end),
+                ETH: (if (.ethereum.usd // 0) > 0 then 1 / .ethereum.usd else 0 end),
+                USDT: (if (.tether.usd // 1) > 0 then 1 / .tether.usd else 1 end),
+                BNB: (if (.binancecoin.usd // 0) > 0 then 1 / .binancecoin.usd else 0 end),
+                SOL: (if (.solana.usd // 0) > 0 then 1 / .solana.usd else 0 end),
+                XRP: (if (.ripple.usd // 0) > 0 then 1 / .ripple.usd else 0 end),
+                USDC: (if (."usd-coin".usd // 1) > 0 then 1 / ."usd-coin".usd else 1 end),
+                ADA: (if (.cardano.usd // 0) > 0 then 1 / .cardano.usd else 0 end),
+                DOGE: (if (.dogecoin.usd // 0) > 0 then 1 / .dogecoin.usd else 0 end),
+                TRX: (if (.tron.usd // 0) > 0 then 1 / .tron.usd else 0 end),
+                MATIC: (if (."matic-network".usd // 0) > 0 then 1 / ."matic-network".usd else 0 end),
+                LTC: (if (.litecoin.usd // 0) > 0 then 1 / .litecoin.usd else 0 end),
+                DOT: (if (.polkadot.usd // 0) > 0 then 1 / .polkadot.usd else 0 end),
+                LINK: (if (.chainlink.usd // 0) > 0 then 1 / .chainlink.usd else 0 end),
+                AVAX: (if (."avalanche-2".usd // 0) > 0 then 1 / ."avalanche-2".usd else 0 end)
+              }
+            }' > docs/crypto-rates.json
+
+          elif [[ "$SOURCE" == "cryptocompare" ]]; then
+            # CryptoCompare 格式（轉換為 "1 USD = X crypto" 格式）
+            cat temp_crypto.json | jq --arg date "$TIMESTAMP" '{
+              base: "USD",
+              date: $date,
+              rates: {
+                BTC: (if (.BTC.USD // 0) > 0 then 1 / .BTC.USD else 0 end),
+                ETH: (if (.ETH.USD // 0) > 0 then 1 / .ETH.USD else 0 end),
+                USDT: (if (.USDT.USD // 1) > 0 then 1 / .USDT.USD else 1 end),
+                BNB: (if (.BNB.USD // 0) > 0 then 1 / .BNB.USD else 0 end),
+                SOL: (if (.SOL.USD // 0) > 0 then 1 / .SOL.USD else 0 end),
+                XRP: (if (.XRP.USD // 0) > 0 then 1 / .XRP.USD else 0 end),
+                USDC: (if (.USDC.USD // 1) > 0 then 1 / .USDC.USD else 1 end),
+                ADA: (if (.ADA.USD // 0) > 0 then 1 / .ADA.USD else 0 end),
+                DOGE: (if (.DOGE.USD // 0) > 0 then 1 / .DOGE.USD else 0 end),
+                TRX: (if (.TRX.USD // 0) > 0 then 1 / .TRX.USD else 0 end),
+                MATIC: (if (.MATIC.USD // 0) > 0 then 1 / .MATIC.USD else 0 end),
+                LTC: (if (.LTC.USD // 0) > 0 then 1 / .LTC.USD else 0 end),
+                DOT: (if (.DOT.USD // 0) > 0 then 1 / .DOT.USD else 0 end),
+                LINK: (if (.LINK.USD // 0) > 0 then 1 / .LINK.USD else 0 end),
+                AVAX: (if (.AVAX.USD // 0) > 0 then 1 / .AVAX.USD else 0 end)
+              }
+            }' > docs/crypto-rates.json
+
+          elif [[ "$SOURCE" == "binance" ]]; then
+            # Binance 格式（轉換為 "1 USD = X crypto" 格式）
+            cat temp_crypto.json | jq --arg date "$TIMESTAMP" '{
+              base: "USD",
+              date: $date,
+              rates: (
+                reduce .[] as $item ({};
+                  . + {
+                    ($item.symbol | sub("USDT$"; "")): (
+                      if (($item.price | tonumber) > 0)
+                      then 1 / ($item.price | tonumber)
+                      else 0
+                      end
+                    )
+                  }
+                )
+              )
+            }' > docs/crypto-rates.json
+          fi
+
+          rm temp_crypto.json
+
+          # 驗證關鍵幣種
+          for coin in BTC ETH USDT; do
+            if grep -q "\"$coin\"" docs/crypto-rates.json; then
+              echo "✓ $coin 已確認"
+            fi
+          done
+
+          # 顯示前 10 行以供檢查
+          head -n 10 docs/crypto-rates.json
+
       - name: Commit and Push
         if: steps.check.outputs.should_update == 'true' && success()
         run: |
@@ -131,9 +267,25 @@ jobs:
           git config --global user.email "actions@github.com"
 
           # 檢查是否有變更
-          if [[ -n $(git status -s docs/rates.json) ]]; then
-            git add docs/rates.json
-            git commit -m "Update exchange rates data (Source: ${{ steps.fetch.outputs.source }})"
+          FIAT_CHANGED=$(git status -s docs/rates.json)
+          CRYPTO_CHANGED=$(git status -s docs/crypto-rates.json)
+
+          if [[ -n "$FIAT_CHANGED" || -n "$CRYPTO_CHANGED" ]]; then
+            # 準備提交訊息
+            COMMIT_MSG="Update rates data"
+
+            if [[ -n "$FIAT_CHANGED" && -n "$CRYPTO_CHANGED" ]]; then
+              COMMIT_MSG="Update fiat & crypto rates (Sources: ${{ steps.fetch.outputs.source }}, ${{ steps.fetch_crypto.outputs.crypto_source }})"
+              git add docs/rates.json docs/crypto-rates.json
+            elif [[ -n "$FIAT_CHANGED" ]]; then
+              COMMIT_MSG="Update fiat rates (Source: ${{ steps.fetch.outputs.source }})"
+              git add docs/rates.json
+            elif [[ -n "$CRYPTO_CHANGED" ]]; then
+              COMMIT_MSG="Update crypto rates (Source: ${{ steps.fetch_crypto.outputs.crypto_source }})"
+              git add docs/crypto-rates.json
+            fi
+
+            git commit -m "$COMMIT_MSG"
             git push
             echo "✅ 匯率已更新並推送"
           else
@@ -146,11 +298,33 @@ jobs:
         with:
           script: |
             const now = new Date().toISOString();
+            const fiatFailed = '${{ steps.fetch.outcome }}' === 'failure';
+            const cryptoFailed = '${{ steps.fetch_crypto.outcome }}' === 'failure';
+
+            let title = '⚠️ 匯率更新失敗';
+            let body = '匯率更新過程中發生錯誤：\n\n';
+
+            if (fiatFailed && cryptoFailed) {
+              title = '⚠️ 法幣與加密貨幣匯率更新失敗';
+              body += '**法幣 API 失敗：**\n- open.er-api.com\n- fawazahmed0 CDN\n\n';
+              body += '**加密貨幣 API 失敗：**\n- CoinGecko\n- CryptoCompare\n- Binance\n\n';
+            } else if (fiatFailed) {
+              title = '⚠️ 法幣匯率更新失敗';
+              body += '**法幣 API 失敗：**\n- open.er-api.com\n- fawazahmed0 CDN\n\n';
+            } else if (cryptoFailed) {
+              title = '⚠️ 加密貨幣匯率更新失敗';
+              body += '**加密貨幣 API 失敗：**\n- CoinGecko\n- CryptoCompare\n- Binance\n\n';
+            } else {
+              body += '其他步驟失敗，請查看 workflow 日誌\n\n';
+            }
+
+            body += `時間：${now}`;
+
             await github.rest.issues.create({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              title: `⚠️ 匯率更新失敗 (${now})`,
-              body: `所有 API 來源都失敗了，請檢查：\n\n- open.er-api.com\n- fawazahmed0 CDN\n\n時間：${now}`,
+              title: `${title} (${now})`,
+              body: body,
               labels: ['bug', 'automated', 'urgent']
             });
 
