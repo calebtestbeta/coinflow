@@ -1,0 +1,32 @@
+{
+  "name": "WAYFARER CALCULATOR",
+  "short_name": "Wayfarer",
+  "description": "專為旅行者設計的極簡匯率計算機。支援多國貨幣即時換算、算式累加與歷史紀錄。",
+  "start_url": "/coinflow/",
+  "scope": "/coinflow/",
+  "display": "standalone",
+  "background_color": "#000000",
+  "theme_color": "#10b981",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/coinflow/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/coinflow/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/coinflow/icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ],
+  "categories": ["finance", "productivity", "utilities"],
+  "lang": "zh-TW"
+}

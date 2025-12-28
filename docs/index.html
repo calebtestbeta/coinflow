@@ -21,9 +21,21 @@
     <!-- 更新 SEO 預覽圖片 -->
     <meta property="og:image" content="https://calebtestbeta.github.io/coinflow/preview.png">
 
-    <!-- Favicon -->
-    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='24' fill='%230ea5e9'/%3E%3Cpath d='M22 34 L38 74 L50 48 L62 74 L78 34' fill='none' stroke='white' stroke-width='8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
-    <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%230ea5e9'/%3E%3Cpath d='M22 34 L38 74 L50 48 L62 74 L78 34' fill='none' stroke='white' stroke-width='8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+    <!-- PWA Meta Tags -->
+    <meta name="theme-color" content="#10b981" media="(prefers-color-scheme: light)">
+    <meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Wayfarer">
+
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="/coinflow/manifest.json">
+
+    <!-- PWA Icons -->
+    <link rel="icon" type="image/svg+xml" href="/coinflow/icons/icon.svg">
+    <link rel="apple-touch-icon" href="/coinflow/icons/icon-192.png">
+    <link rel="apple-touch-icon" sizes="192x192" href="/coinflow/icons/icon-192.png">
+    <link rel="apple-touch-icon" sizes="512x512" href="/coinflow/icons/icon-512.png">
 
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
@@ -940,6 +952,36 @@
                 };
             }
         }).mount('#app');
+    </script>
+
+    <!-- Service Worker Registration -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker
+                    .register('/coinflow/sw.js', { scope: '/coinflow/' })
+                    .then(registration => {
+                        console.log('✅ Service Worker registered:', registration.scope);
+
+                        // Check for updates every 24 hours
+                        setInterval(() => {
+                            registration.update();
+                        }, 24 * 60 * 60 * 1000);
+                    })
+                    .catch(err => {
+                        console.warn('❌ Service Worker registration failed:', err);
+                    });
+            });
+        }
+
+        // PWA Install Prompt
+        let deferredPrompt;
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            console.log('💡 PWA install prompt available');
+            // Future: Show custom install button in UI
+        });
     </script>
 </body>
 </html><!-- Updated at Sun Dec 21 14:14:18 CST 2025 -->
