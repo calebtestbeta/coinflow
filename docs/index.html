@@ -248,6 +248,43 @@
                             <div class="w-10 h-10 rounded-full bg-emerald-100 dark:bg-emerald-800 flex items-center justify-center text-emerald-600 dark:text-emerald-400 shrink-0"><i class="fa-solid fa-rotate"></i></div>
                             <div><div class="text-xs text-emerald-600/70 dark:text-emerald-400/70 font-medium uppercase tracking-wide">Last Updated</div><div class="font-bold text-emerald-800 dark:text-emerald-300 text-lg">{{ lastUpdated }}</div></div>
                         </div>
+                        <!-- Add to Home Screen Instructions -->
+                        <div class="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-2xl">
+                            <div class="flex items-start gap-3">
+                                <div class="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-800 flex items-center justify-center text-blue-600 dark:text-blue-400 shrink-0">
+                                    <i class="fa-solid fa-mobile-screen-button"></i>
+                                </div>
+                                <div class="flex-1">
+                                    <div class="text-xs text-blue-600/70 dark:text-blue-400/70 font-medium uppercase tracking-wide mb-3">
+                                        加入主畫面
+                                    </div>
+                                    <div class="text-sm text-gray-700 dark:text-gray-300 space-y-3">
+                                        <!-- iOS -->
+                                        <div>
+                                            <p class="font-medium text-gray-800 dark:text-gray-200 mb-1.5">
+                                                iOS (Safari)
+                                            </p>
+                                            <ol class="space-y-1 text-xs ml-6">
+                                                <li>1. 點擊底部分享按鈕</li>
+                                                <li>2. 選擇「加入主畫面」</li>
+                                                <li>3. 點擊「新增」完成</li>
+                                            </ol>
+                                        </div>
+                                        <!-- Android -->
+                                        <div>
+                                            <p class="font-medium text-gray-800 dark:text-gray-200 mb-1.5">
+                                                Android (Chrome/Edge)
+                                            </p>
+                                            <ol class="space-y-1 text-xs ml-6">
+                                                <li>1. 點擊右上角選單（三個點圖示）</li>
+                                                <li>2. 選擇「安裝應用程式」</li>
+                                                <li>3. 確認安裝即可</li>
+                                            </ol>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                         <div class="flex items-center justify-between p-2">
                             <span class="text-gray-600 dark:text-gray-300 font-medium">深色模式</span>
                             <button @click="toggleTheme" class="relative inline-flex h-8 w-14 items-center rounded-full transition-colors duration-300 focus:outline-none" :class="isDarkMode ? 'bg-emerald-500' : 'bg-gray-200'"><span class="inline-block h-6 w-6 transform rounded-full bg-white shadow transition-transform duration-300" :class="isDarkMode ? 'translate-x-7' : 'translate-x-1'"><i v-if="isDarkMode" class="fa-solid fa-moon text-emerald-500 text-xs absolute top-1.5 left-1.5"></i><i v-else class="fa-solid fa-sun text-yellow-500 text-xs absolute top-1.5 left-1.5"></i></span></button>
