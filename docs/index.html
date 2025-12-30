@@ -238,12 +238,12 @@
         <!-- Info Modal -->
         <transition enter-active-class="transition duration-300 ease-out" enter-from-class="opacity-0 scale-95" enter-to-class="opacity-100 scale-100" leave-active-class="transition duration-200 ease-in" leave-from-class="opacity-100 scale-100" leave-to-class="opacity-0 scale-95">
             <div v-if="isInfoOpen" id="modal-info" class="absolute inset-0 z-50 flex items-center justify-center p-6 modal-backdrop bg-black/20 dark:bg-black/50" @click.self="isInfoOpen = false">
-                <div class="bg-white dark:bg-dark-card w-full max-w-sm rounded-3xl p-6 shadow-2xl transform transition-all border border-gray-100 dark:border-gray-800">
-                    <div class="flex justify-between items-center mb-6">
+                <div class="bg-white dark:bg-dark-card w-full max-w-sm rounded-3xl shadow-2xl transform transition-all border border-gray-100 dark:border-gray-800 flex flex-col max-h-[90vh]">
+                    <div class="flex justify-between items-center p-6 pb-4 shrink-0">
                         <h2 class="text-xl font-bold text-gray-800 dark:text-white">關於 Wayfarer Coinflow</h2>
                         <button @click="isInfoOpen = false" class="w-8 h-8 rounded-full bg-gray-100 dark:bg-dark-btn flex items-center justify-center text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 transition"><i class="fa-solid fa-xmark"></i></button>
                     </div>
-                    <div class="space-y-6">
+                    <div class="space-y-6 overflow-y-auto px-6 pb-6">
                         <div class="bg-emerald-50 dark:bg-emerald-900/20 p-4 rounded-2xl flex items-center gap-3">
                             <div class="w-10 h-10 rounded-full bg-emerald-100 dark:bg-emerald-800 flex items-center justify-center text-emerald-600 dark:text-emerald-400 shrink-0"><i class="fa-solid fa-rotate"></i></div>
                             <div><div class="text-xs text-emerald-600/70 dark:text-emerald-400/70 font-medium uppercase tracking-wide">Last Updated</div><div class="font-bold text-emerald-800 dark:text-emerald-300 text-lg">{{ lastUpdated }}</div></div>
