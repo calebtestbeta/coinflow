@@ -1,17 +1,26 @@
 // Service Worker for WAYFARER CALCULATOR PWA
-// Version: 1.2.0
+// Version: 2.0.0
 
-const CACHE_VERSION = 'v1.2.0';
+const CACHE_VERSION = 'v2.0.0';
 const CACHE_NAME = `wayfarer-${CACHE_VERSION}`;
 
 // Critical files to cache immediately on install
 const STATIC_CACHE = [
   '/coinflow/',
   '/coinflow/index.html',
+  '/coinflow/manifest.json',
   '/coinflow/icons/icon-192.png',
   '/coinflow/icons/icon-512.png',
   '/coinflow/icons/icon.svg',
-  '/coinflow/preview.png'
+  '/coinflow/preview.png',
+  '/coinflow/libs/vue/vue.global.prod.js',
+  '/coinflow/libs/tailwind/tailwind.browser.js',
+  '/coinflow/libs/currency/currency.min.js',
+  '/coinflow/libs/mathjs/math.min.js',
+  '/coinflow/libs/fontawesome/css/all.min.css',
+  '/coinflow/libs/fontawesome/webfonts/fa-solid-900.woff2',
+  '/coinflow/libs/fontawesome/webfonts/fa-regular-400.woff2',
+  '/coinflow/libs/fontawesome/webfonts/fa-brands-400.woff2'
 ];
 
 // Data files - cache but always try network first
@@ -20,15 +29,6 @@ const DATA_FILES = [
   '/coinflow/crypto-rates.json',
   '/coinflow/currencies.json',
   '/coinflow/crypto-currencies.json'
-];
-
-// CDN resources to cache at runtime
-const CDN_PATTERNS = [
-  /unpkg\.com/,
-  /cdn\.tailwindcss\.com/,
-  /cdnjs\.cloudflare\.com/,
-  /fonts\.googleapis\.com/,
-  /fonts\.gstatic\.com/
 ];
 
 // Install Event: Pre-cache critical assets
@@ -136,11 +136,9 @@ self.addEventListener('fetch', (event) => {
               return response;
             }
 
-            // Cache CDN resources at runtime
-            const shouldCache = CDN_PATTERNS.some((pattern) => pattern.test(url.href)) ||
-                               url.pathname.startsWith('/coinflow/');
-
-            if (shouldCache) {
+            // Cache /coinflow/ resources at runtime (e.g. Google Fonts)
+            if (url.pathname.startsWith('/coinflow/') ||
+                /fonts\.googleapis\.com|fonts\.gstatic\.com/.test(url.href)) {
               const responseClone = response.clone();
               caches.open(CACHE_NAME).then((cache) => {
                 cache.put(event.request, responseClone);
@@ -187,3 +185,4 @@ self.addEventListener('message', (event) => {
 });
 
 console.log('[Service Worker] Loaded version:', CACHE_VERSION);
+
